@@ -2,10 +2,9 @@
 #include "window_adapter.h"
 #include <KDFoundation/event.h>
 #include <KDGui/gui_events.h>
+#include "kdgui_slint_keys.h"
 
 namespace mecaps {
-using MouseEvent = slint::cbindgen_private::MouseEvent;
-using Tag = slint::cbindgen_private::MouseEvent::Tag;
 using PointerEventButton = slint::cbindgen_private::PointerEventButton;
 
 static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButton button)
@@ -24,47 +23,9 @@ static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButton button)
 		return PointerEventButton::Middle;
 		break;
 	default:
-		SPDLOG_ERROR("Unknown pointer type. Defaulting to right click.");
-		return PointerEventButton::Right;
+		SPDLOG_WARN("Unknown pointer button type.");
+		return PointerEventButton::Other;
 		break;
-	}
-}
-
-template <SlintWrapperWindow::KeyEventType EventType>
-void SlintWrapperWindow::dispatchEventsForModifiers(
-	KDGui::KeyboardModifiers mods)
-{
-	using Mod = KDGui::KeyboardModifier;
-
-	struct KeyCode
-	{
-		const char16_t *str;
-		Mod mod;
-	};
-
-	// from internal/common/key_codes.rs in slint
-	static constexpr std::array codes{
-		KeyCode{.str = u"0010", .mod = Mod::Mod_Shift},
-		KeyCode{.str = u"0011", .mod = Mod::Mod_Control},
-		KeyCode{.str = u"0012", .mod = Mod::Mod_Alt},
-		KeyCode{.str = u"0017", .mod = Mod::Mod_Logo},
-		KeyCode{.str = u"0014", .mod = Mod::Mod_CapsLock},
-		// not used by slint?
-		KeyCode{.str = nullptr, .mod = Mod::Mod_NumLock},
-	};
-
-	for (const auto &code : codes) {
-		if (code.str == nullptr)
-			continue;
-		if ((mods & code.mod) != 0u) {
-			if constexpr (EventType == Release) {
-				m_adapter->window().dispatch_key_release_event(
-					slint::SharedString((char *)code.str));
-			} else {
-				m_adapter->window().dispatch_key_press_event(
-					slint::SharedString((char *)code.str));
-			}
-		}
 	}
 }
 
@@ -74,182 +35,215 @@ SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 	scaleFactor.valueChanged().connect([this](float newScale) {
 		SPDLOG_DEBUG(
 			"Slint window scale does not match OS window scale. Updating...");
-		m_adapter->dispatch_scale_factor_change_event(newScale);
+		m_adapter->window().dispatch_scale_factor_change_event(newScale);
 	});
+	m_unicodeForKey.reserve(kdguiKeyMax);
+	for (int i = 0; i < kdguiKeyMax; ++i) {
+		m_unicodeForKey.emplace_back(std::nullopt);
+	}
 }
 
 void SlintWrapperWindow::event(EventReceiver *target,
 							   KDFoundation::Event *event)
 {
-	if (target == this && event->type() == KDFoundation::Event::Type::Update) {
-		m_adapter->render();
-	}
-
+	// process key/mouse events, timer events, and user events.
 	KDGui::Window::event(target, event);
+
+	if (event->isAccepted())
+		return;
+
+	switch (event->type()) {
+	case KDFoundation::Event::Type::Update:
+		if (target == this)
+			m_adapter->render();
+		break;
+	case KDFoundation::Event::Type::TextInput:
+		textInputEvent(static_cast<KDGui::TextInputEvent *>(event));
+		break;
+	default:
+		break;
+	}
 }
 
-void SlintWrapperWindow::resizeEvent(KDFoundation::ResizeEvent *event)
+void SlintWrapperWindow::textInputEvent(KDGui::TextInputEvent *event)
 {
-	assert(m_adapter->initialized());
-	SPDLOG_DEBUG("Resize even received");
-
-	// TODO: check if kdfoundation resize event is actually logical size
-	slint::LogicalSize windowSizeLogical(slint::Size<float>{
-		.width = static_cast<float>(event->width()),
-		.height = static_cast<float>(event->height()),
-	});
-
-	m_adapter->resize(windowSizeLogical);
-
-	m_adapter->dispatch_resize_event(windowSizeLogical);
-
-	SPDLOG_DEBUG("Resing to X: {}, Y: {}", event->width(), event->height());
-
-	event->setAccepted(true);
-}
-
-void SlintWrapperWindow::mousePressEvent(KDGui::MousePressEvent *event)
-{
-	assert(m_adapter->initialized());
-	SPDLOG_DEBUG("Mouse press event received");
-
-	MouseEvent slintEvent;
-	slintEvent.tag = Tag::Pressed;
-	slintEvent.pressed.button = kdGuiToPointerEventButton(event->button());
-	slintEvent.pressed.position.x = event->xPos();
-	slintEvent.pressed.position.y = event->yPos();
-	// NOTE: click count is not supported by kdutils. defaults to 1 click
-	slintEvent.pressed.click_count = 1;
-
-	m_adapter->dispatch_pointer_event(slintEvent);
-	event->setAccepted(true);
-
-	SPDLOG_DEBUG("At X: {}, Y: {}", event->xPos(), event->yPos());
-}
-
-void SlintWrapperWindow::mouseReleaseEvent(KDGui::MouseReleaseEvent *event)
-{
-	assert(m_adapter->initialized());
-	SPDLOG_DEBUG("Mouse release event received.");
-
-	MouseEvent slintEvent;
-	slintEvent.tag = Tag::Released;
-	// NOTE: click count is not supported by kdutils. defaults to 1 click
-	slintEvent.released.click_count = 1;
-	slintEvent.released.button = kdGuiToPointerEventButton(event->button());
-	slintEvent.pressed.position.x = event->xPos();
-	slintEvent.pressed.position.y = event->yPos();
-
-	m_adapter->dispatch_pointer_event(slintEvent);
-	event->setAccepted(true);
-}
-
-void SlintWrapperWindow::mouseMoveEvent(KDGui::MouseMoveEvent *event)
-{
-	assert(m_adapter->initialized());
-
-	MouseEvent slintEvent;
-	slintEvent.tag = Tag::Moved;
-	// TODO: the slint event takes floats, not ints. might need to be converted
-	// to logical size
-	slintEvent.moved.position.x = (float)event->xPos();
-	slintEvent.moved.position.y = (float)event->yPos();
-
-	slint_platform::update_timers_and_animations();
-	m_adapter->dispatch_pointer_event(slintEvent);
-	event->setAccepted(true);
-}
-
-void SlintWrapperWindow::mouseWheelEvent(KDGui::MouseWheelEvent *event)
-{
-	assert(m_adapter->initialized());
-	SPDLOG_DEBUG("Mouse wheel event received.");
-	MouseEvent slintEvent;
-	slintEvent.tag = Tag::Wheel;
-	// TODO: the slint event takes floats, not ints. might need to be converted
-	// to logical size
-	slintEvent.wheel.delta_x = (float)event->xDelta();
-	slintEvent.wheel.delta_y = (float)event->yDelta();
-	KDGui::Position cPos = cursorPosition.get();
-	slintEvent.wheel.position.x = (float)cPos.x;
-	slintEvent.wheel.position.y = (float)cPos.y;
-
-	m_adapter->dispatch_pointer_event(slintEvent);
-	event->setAccepted(true);
-}
-
-void SlintWrapperWindow::keyPressEvent(KDGui::KeyPressEvent *event)
-{
-	{
-		auto newModifiers = event->modifiers();
-		auto changedMods = m_keyboardModifiers ^ newModifiers;
-
-		if (changedMods != 0u) {
-			SPDLOG_DEBUG("PRESSED, CHANGED BITS: {:#b}", changedMods);
-			dispatchEventsForModifiers<Press>(changedMods);
-			// assert that all the changed (pressed) keys are 1s in the new
-			// state
-			if ((newModifiers & changedMods) == changedMods) {
-				// FIXME: shouldn't happen
-				SPDLOG_WARN("Old keyboard state does not account for all the "
-							"changed bits (pressed keys). New bits are as "
-							"follows: {:#b}",
-							newModifiers & changedMods);
-			}
-			// this will handle dispatching events on change
-			m_keyboardModifiers = newModifiers;
-		}
+	// this happens with backspace, which is a special key which also sends a
+	// textInputEvent
+	if (!m_lastPressed) {
+		SPDLOG_INFO("TextInputEvent recieved, but physical key is unknown or a "
+					"special key.");
+		return;
 	}
 
-	// create a null-terminated string out of the event's key
-	// FIXME: figure out how the encoding actually works. currently this does
-	// caps-only and special keys like backspace and arrow keys don't work
-	KDGui::Key key = event->key();
-	std::array<char, sizeof(KDGui::Key) + 1> string;
-	string.fill(0);
-	std::memcpy(string.data(), &key, sizeof(key));
+	assert(!isSpecial(m_lastPressed.value()));
+
+	if (unknownKey(m_lastPressed.value())) {
+		SPDLOG_WARN("Unknown key");
+		return;
+	}
+
+	auto &optional = m_unicodeForKey[m_lastPressed.value()];
+
+	// optional will only be null once. every time a key is pressed it will be
+	// written to.
+	if (!optional)
+		optional.emplace();
+
+	auto &textBuffer = optional.value();
+	// NOTE: this check relies on the event's text and the text buffer
+	// containing the same size chars
+	if (event->text().size() > textBuffer.size()) {
+		SPDLOG_WARN(
+			"Unicode key representation longer than expected, aborting.");
+		return;
+	}
+
+	std::memcpy(textBuffer.data(), event->text().data(), event->text().size());
 
 	m_adapter->window().dispatch_key_press_event(
-		slint::SharedString(string.data()));
+		slint::SharedString(optional.value().data()));
 
 	event->setAccepted(true);
 }
 
 void SlintWrapperWindow::keyReleaseEvent(KDGui::KeyReleaseEvent *event)
 {
-	{
-		auto newModifiers = event->modifiers();
-		auto changedMods = m_keyboardModifiers ^ newModifiers;
+	auto key = event->key();
 
-		if (changedMods != 0u) {
-			SPDLOG_DEBUG("RELEASED, CHANGED BITS: {:#b}", changedMods);
-			dispatchEventsForModifiers<Release>(changedMods);
-			// assert that all the changed (released) keys were 1s in the old
-			// state
-			if ((m_keyboardModifiers & changedMods) == changedMods) {
-				// FIXME: shouldn't happen
-				SPDLOG_WARN("New keyboard state does not account for all the "
-							"changed bits (released keys). Old bits are as "
-							"follows: {:#b}",
-							m_keyboardModifiers & changedMods);
-			}
-			// this will handle dispatching events on change
-			m_keyboardModifiers = newModifiers;
-		}
+	if (unknownKey(key)) {
+		SPDLOG_WARN("Unknown key");
+		return;
 	}
 
-	// create a null-terminated string out of the event's key
-	// FIXME: figure out how the encoding actually works. currently this does
-	// caps-only and special keys like backspace and arrow keys don't work
-	KDGui::Key key = event->key();
-	std::array<char, sizeof(KDGui::Key) + 1> string;
-	string.fill(0);
-	std::memcpy(string.data(), &key, sizeof(key));
+	if (isSpecial(key)) {
+		m_adapter->window().dispatch_key_release_event(specialKeyText(key));
+	} else {
+		auto &optionalUnicode = m_unicodeForKey[event->key()];
 
-	m_adapter->window().dispatch_key_release_event(
-		slint::SharedString(string.data()));
+		if (!optionalUnicode) {
+			SPDLOG_WARN(
+				"Key released, but we don't know its unicode representation.");
+			return;
+		}
+
+		auto &unicode = optionalUnicode.value();
+
+		m_adapter->window().dispatch_key_release_event(
+			slint::SharedString(unicode.data()));
+	}
 
 	event->setAccepted(true);
 }
 
+void SlintWrapperWindow::keyPressEvent(KDGui::KeyPressEvent *event)
+{
+	auto key = event->key();
+	if (unknownKey(key)) {
+		SPDLOG_WARN("Unknown key");
+		return;
+	}
+
+	if (isSpecial(key)) {
+		m_adapter->window().dispatch_key_press_event(specialKeyText(key));
+		// special keys may send text events. those will bail if no lastPressed
+		m_lastPressed = std::nullopt;
+	} else {
+		// capture this key and actually send the press event when we get its
+		// input text
+		m_lastPressed = key;
+	}
+
+	event->setAccepted(true);
+}
+
+// an alternative would be to connect to width.valueChanged() and
+// height.valueChanged()
+void SlintWrapperWindow::resizeEvent(KDFoundation::ResizeEvent *event)
+{
+	KDGui::Window::resizeEvent(event);
+
+	assert(m_adapter->initialized());
+
+	const float scale = m_adapter->window().scale_factor();
+
+	slint::LogicalSize windowSizeLogical({
+		.width = static_cast<float>(event->width()) * scale,
+		.height = static_cast<float>(event->height()) * scale,
+	});
+
+	m_adapter->window().dispatch_resize_event(windowSizeLogical);
+
+	event->setAccepted(true);
+}
+
+void SlintWrapperWindow::mousePressEvent(KDGui::MousePressEvent *event)
+{
+	KDGui::Window::mousePressEvent(event);
+	assert(m_adapter->initialized());
+
+	float scale = m_adapter->window().scale_factor();
+
+	m_adapter->window().dispatch_pointer_press_event(
+		slint::LogicalPosition({
+			.x = static_cast<float>(event->xPos()) * scale,
+			.y = static_cast<float>(event->yPos()) * scale,
+		}),
+		kdGuiToPointerEventButton(event->button()));
+	event->setAccepted(true);
+}
+
+void SlintWrapperWindow::mouseReleaseEvent(KDGui::MouseReleaseEvent *event)
+{
+	KDGui::Window::mouseReleaseEvent(event);
+	assert(m_adapter->initialized());
+	SPDLOG_DEBUG("Mouse release event received.");
+
+	const float scale = m_adapter->window().scale_factor();
+
+	m_adapter->window().dispatch_pointer_release_event(
+		slint::LogicalPosition({
+			.x = static_cast<float>(event->xPos()) * scale,
+			.y = static_cast<float>(event->yPos()) * scale,
+		}),
+		kdGuiToPointerEventButton(event->button()));
+	event->setAccepted(true);
+}
+
+void SlintWrapperWindow::mouseMoveEvent(KDGui::MouseMoveEvent *event)
+{
+	KDGui::Window::mouseMoveEvent(event);
+	assert(m_adapter->initialized());
+
+	slint_platform::update_timers_and_animations();
+
+	const float scale = m_adapter->window().scale_factor();
+
+	m_adapter->window().dispatch_pointer_move_event(slint::LogicalPosition({
+		.x = static_cast<float>(event->xPos()) * scale,
+		.y = static_cast<float>(event->yPos()) * scale,
+	}));
+
+	event->setAccepted(true);
+}
+
+void SlintWrapperWindow::mouseWheelEvent(KDGui::MouseWheelEvent *event)
+{
+	KDGui::Window::mouseWheelEvent(event);
+	assert(m_adapter->initialized());
+	SPDLOG_DEBUG("Mouse wheel event received.");
+
+	const auto &pos = cursorPosition.get();
+	const float scale = m_adapter->window().scale_factor();
+
+	const auto logicalPos = slint::LogicalPosition({
+		.x = static_cast<float>(pos.x) * scale,
+		.y = static_cast<float>(pos.y) * scale,
+	});
+
+	m_adapter->window().dispatch_pointer_scroll_event(
+		logicalPos, static_cast<float>(event->xDelta()) * scale,
+		static_cast<float>(event->yDelta()) * scale);
+
+	event->setAccepted(true);
+}
 } // namespace mecaps

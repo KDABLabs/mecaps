@@ -17,7 +17,7 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 #endif
 
-namespace slint_platform = slint::experimental::platform;
+namespace slint_platform = slint::platform;
 
 namespace mecaps {
 
@@ -107,22 +107,20 @@ KDWindowAdapter::KDWindowAdapter() noexcept
 #endif
 }
 
-void KDWindowAdapter::show() const
+void KDWindowAdapter::set_visible(bool visible)
 {
-	// visible must be called first to map the platform window
-	m_kdWindow->visible = true;
-	// now we can change the title
-	m_kdWindow->title = KDGui::GuiApplication::instance()->applicationName();
-	m_renderer->show();
+	if (visible) {
+		// visible must be called first to map the platform window
+		m_kdWindow->visible = true;
+		// now we can change the title
+		m_kdWindow->title =
+			KDGui::GuiApplication::instance()->applicationName();
+	} else {
+		m_kdWindow->destroy();
+	}
 }
 
-void KDWindowAdapter::hide() const
-{
-	m_renderer->hide();
-	m_kdWindow->destroy();
-}
-
-void KDWindowAdapter::request_redraw() const
+void KDWindowAdapter::request_redraw()
 {
 	// TODO: I *think* that there is some benefit to going through the platform
 	// event loop (the window manager should know that we are redrawing?). for
@@ -152,19 +150,7 @@ void KDWindowAdapter::render() const
 {
 	assert(window().size() == physical_size());
 	slint_platform::update_timers_and_animations();
-	m_renderer->render(window());
-}
-
-// called from SlintWrapperWindow after dispatching resize event to slint
-void KDWindowAdapter::resize(slint::LogicalSize windowSize)
-{
-	slint::PhysicalSize size(slint::Size<uint32_t>{
-		.width = (uint32_t)std::round(windowSize.width *
-									  m_kdWindow->scaleFactor.get()),
-		.height = (uint32_t)std::round(windowSize.height *
-									   m_kdWindow->scaleFactor.get())});
-
-	m_renderer->resize(size);
+	m_renderer->render();
 }
 
 slint::PhysicalSize KDWindowAdapter::physical_size() const
@@ -209,7 +195,7 @@ createXcbRenderer(std::optional<slint_platform::SkiaRenderer> &output,
 		xcbVisual = windowAttributesReply->visual;
 	}
 
-	output.emplace(slint_platform::NativeWindowHandle::from_x11(
+	output.emplace(slint_platform::NativeWindowHandle::from_x11_xcb(
 					   xcbWindowHandle, xcbVisual, xcbConnection, 0),
 				   size);
 }

@@ -1,8 +1,8 @@
 #pragma once
-#include "slint_platform.h"
+#include <slint-platform.h>
 #include <KDGui/window.h>
 
-namespace slint_platform = slint::experimental::platform;
+namespace slint_platform = slint::platform;
 
 namespace mecaps {
 
@@ -14,12 +14,10 @@ class KDWindowAdapter : public slint_platform::WindowAdapter
 	slint_platform::AbstractRenderer &renderer() override;
 	slint::PhysicalSize physical_size() const override;
 
-	void show() const override;
-	void hide() const override;
-	void request_redraw() const override;
+	void set_visible(bool) override;
+	void request_redraw() override;
 
 	void render() const;
-	void resize(slint::LogicalSize windowSize);
 
   private:
 	std::optional<slint_platform::SkiaRenderer> m_renderer;

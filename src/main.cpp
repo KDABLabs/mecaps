@@ -8,6 +8,10 @@ int main()
 
 	// step 1: register GuiApplication singleton
 	KDGui::GuiApplication app;
+	// this is the supported way to set the window title initially.
+	// the title can be changed from `window->title` at any time within the
+	// application logic.
+	app.applicationName = "Slint/KDGui Integration";
 
 	// step 2: create a window with kdgui and register it with slint
 	auto *window = mecaps::createAndIntegrateWindow(windowSize);
@@ -21,10 +25,7 @@ int main()
 	slintApp->on_request_increase_value(
 		[&] { slintApp->set_counter(slintApp->get_counter() + 1); });
 
-	// this is the supported way to set the window title initially.
-	// the title can be changed from `window->title` at any time within the
-	// application logic.
-	app.applicationName = "Slint/KDGui Integration";
+	slintApp->run();
 
-	return mecaps::run(window, slintApp);
+	return 0;
 }
