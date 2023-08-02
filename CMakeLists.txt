@@ -5,9 +5,12 @@ set (CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
     src/main.cpp
-    src/mecaps/window_adapter.cpp
-    src/mecaps/slint_wrapper_window.cpp
+    src/mecaps/abstract_transfer_handle.cpp
+    src/mecaps/http_transfer_handle.cpp
     src/mecaps/mecaps.cpp
+    src/mecaps/network_access_manager.cpp
+    src/mecaps/slint_wrapper_window.cpp
+    src/mecaps/window_adapter.cpp
 )
 
 set(SLINT_SOURCES
@@ -20,6 +23,7 @@ set(LIBRARIES
     KDUtils::KDUtils
     KDUtils::KDFoundation
     KDUtils::KDGui
+    CURL::libcurl
 )
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/ECM/find-modules")
@@ -53,9 +57,10 @@ add_executable(my_application ${SOURCES})
 
 slint_target_sources(my_application ${SLINT_SOURCES})
 target_link_libraries(my_application PRIVATE ${LIBRARIES})
-include_directories(${spdlog_INCLUDE_DIRS} ${KDUtils_INCLUDE_DIRS})
+include_directories(${spdlog_INCLUDE_DIRS} ${KDUtils_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS})
 target_include_directories(my_application PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>)
 # On Windows, copy the Slint DLL next to the application binary so that it's found.
 if (WIN32)
     add_custom_command(TARGET my_application POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:my_application> $<TARGET_FILE_DIR:my_application> COMMAND_EXPAND_LISTS)
+    target_compile_definitions(my_application PRIVATE NOMINMAX)
 endif()

@@ -2,6 +2,7 @@ include(FetchContent)
 include(cmake/dependencies/slint.cmake)
 include(cmake/dependencies/spdlog.cmake)
 include(cmake/dependencies/kdutils.cmake)
+include(cmake/dependencies/curl.cmake)
 
 # we need xcb symbols in order to get all the information necessary to create
 # a slint window handle

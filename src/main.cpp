@@ -1,4 +1,6 @@
+#include "mecaps/http_transfer_handle.h"
 #include "mecaps/mecaps.h"
+#include "mecaps/network_access_manager.h"
 #include "appwindow.h"
 
 int main()
@@ -21,9 +23,36 @@ int main()
 	// and make createAndIntegrateWindow fail with an AlreadySet error
 	auto slintApp = AppWindow::create();
 
+	// set up everything related to CURL
+	NetworkAccessManager &manager = NetworkAccessManager::instance();
+
+	HttpTransferHandle *httpTransfer;
+	auto onHttpExampleTransferFinished = [&]() {
+		spdlog::info("HttpTransferHandle::finished() signal triggered for URL {}", httpTransfer->url());
+		if (httpTransfer->error().empty()) {
+			spdlog::info("Data:\n{}", httpTransfer->dataRead());
+			slintApp->set_fetchedContent(slint::SharedString(httpTransfer->dataRead()));
+		}
+		else {
+			slintApp->set_fetchedContent(slint::SharedString());
+		}
+
+		delete httpTransfer;
+	};
+
 	// set up application logic
 	slintApp->on_request_increase_value(
-		[&] { slintApp->set_counter(slintApp->get_counter() + 1); });
+		[&] {
+			slintApp->set_counter(slintApp->get_counter() + 1);
+		});
+
+	slintApp->on_query_url(
+		[&] {
+			const auto url = slintApp->get_url().data();
+			httpTransfer = new HttpTransferHandle(url, false);
+			httpTransfer->finished.connect(onHttpExampleTransferFinished);
+			manager.registerTransfer(httpTransfer);
+		});
 
 	slintApp->run();
 
