@@ -1,3 +1,4 @@
+#include "mecaps/ftp_transfer_handle.h"
 #include "mecaps/http_transfer_handle.h"
 #include "mecaps/mecaps.h"
 #include "mecaps/network_access_manager.h"
@@ -39,6 +40,42 @@ int main()
 
 		delete httpTransfer;
 	};
+
+	File ftpFile = File("ls-lR.gz");
+	FtpUploadTransferHandle *ftpUploadTransfer = nullptr;
+	FtpDownloadTransferHandle *ftpDownloadTransfer = nullptr;
+
+	auto onFtpExampleUploadTransferFinished = [&]() {
+		spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
+		delete ftpUploadTransfer;
+	};
+	auto onFtpExampleUploadTransferProgressPercentChanged = [&]() {
+		spdlog::info("FtpUploadTransferHandle::progressChanged() upload progress: {} %", ftpUploadTransfer->progressPercent());
+	};
+	auto startFtpUpload = [&]() {
+		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, "ftp://ftp.cs.brown.edu/incoming/ls-lR.gz", true);
+		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
+		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
+		manager.registerTransfer(ftpUploadTransfer);
+	};
+
+	auto onFtpExampleDownloadTransferFinished = [&]() {
+		spdlog::info("FtpDownloadTransferHandle::finished() - downloaded {} bytes", ftpDownloadTransfer->numberOfBytesTransferred.get());
+		delete ftpDownloadTransfer;
+	};
+	auto onFtpExampleDownloadTransferProgressPercentChanged = [&]() {
+		spdlog::info("FtpDownloadTransferHandle::progressChanged() download progress: {} %", ftpDownloadTransfer->progressPercent());
+	};
+	auto startFtpDownload = [&]() {
+		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, "ftp://ftp-stud.hs-esslingen.de/debian/ls-lR.gz", false);
+		ftpDownloadTransfer->finished.connect(startFtpUpload);
+		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
+		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);
+		manager.registerTransfer(ftpDownloadTransfer);
+	};
+
+	// start FTP download which will trigger FTP upload afterwards
+	startFtpDownload();
 
 	// set up application logic
 	slintApp->on_request_increase_value(
