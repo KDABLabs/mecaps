@@ -87,3 +87,14 @@ size_t AbstractTransferHandle::writeCallback(char *data, size_t size, size_t nme
 {
 	return self->writeCallbackImpl(data, size, nmemb);
 }
+
+void AbstractTransferHandle::transferDoneCallback(CURLcode result)
+{
+	transferDoneCallbackImpl(result);
+
+	if (result != CURLcode::CURLE_OK) {
+		spdlog::error("curl transfer finished with code {} ({}) {}", result, curl_easy_strerror(result), error());
+	}
+
+	finished.emit((int)result);
+}

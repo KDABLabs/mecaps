@@ -142,7 +142,7 @@ void NetworkAccessManager::processTransferMessages()
 			auto transferHandle = AbstractTransferHandle::fromCurlEasyHandle(msg->easy_handle);
 			unregisterTransfer(transferHandle);
 
-			transferHandle->finished.emit();
+			transferHandle->transferDoneCallback(msg->data.result);
 		}
 	}
 }

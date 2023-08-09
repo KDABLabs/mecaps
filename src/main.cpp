@@ -27,9 +27,9 @@ int main()
 	NetworkAccessManager &manager = NetworkAccessManager::instance();
 
 	HttpTransferHandle *httpTransfer;
-	auto onHttpExampleTransferFinished = [&]() {
+	auto onHttpExampleTransferFinished = [&](int result) {
 		spdlog::info("HttpTransferHandle::finished() signal triggered for URL {}", httpTransfer->url());
-		if (httpTransfer->error().empty()) {
+		if (result == CURLcode::CURLE_OK) {
 			spdlog::info("Data:\n{}", httpTransfer->dataRead());
 			slintApp->set_fetchedContent(slint::SharedString(httpTransfer->dataRead()));
 		}
