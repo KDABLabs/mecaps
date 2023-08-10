@@ -161,16 +161,12 @@ void NetworkAccessManager::FileDescriptorNotifierRegistry::manageFileDescriptorN
 	// TODO -> translating CURL_POLL events to KDFoundation::FileDescriptorNotifiers with respective NotificationTypes can probalby be done more elegant than this, works for now though
 	switch (eventType) {
 	case CURL_POLL_IN:
-		// NOTE -> order of methods seems to be crucial for KDFoundation to be able to manage FDNs without errors
-		// I suspect an error calling epoll_ctl with EPOLL_CTL_DEL + EPOLL_CTL_ADD, while EPOLL_CTL_MOD seems to run just fine
 		registerFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
 		unregisterFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
 		break;
 	case CURL_POLL_OUT:
-		// NOTE -> order of methods seems to be crucial for KDFoundation to be able to manage FDNs without errors
-		// I suspect an error calling epoll_ctl with EPOLL_CTL_DEL + EPOLL_CTL_ADD, while EPOLL_CTL_MOD seems to run just fine
-		registerFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
 		unregisterFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
+		registerFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
 		break;
 	case CURL_POLL_INOUT:
 		registerFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
