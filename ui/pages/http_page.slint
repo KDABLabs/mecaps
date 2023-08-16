@@ -1,0 +1,45 @@
+import { Button, GroupBox, LineEdit, ScrollView, VerticalBox } from "std-widgets.slint";
+import { Page } from "page.slint";
+
+export global HttpSingleton {
+    in-out property<string> url;
+    in property<string> fetched-content;
+    callback request-http-query();
+}
+
+export component HttpPage inherits Page {
+    title: @tr("HTTP");
+
+    VerticalLayout {
+        GroupBox {
+            title: "URL";
+            vertical-stretch: 0;
+            HorizontalLayout {
+                spacing: 10px;
+
+                line-edit-url := LineEdit {
+                    text <=> HttpSingleton.url;
+                }
+                Button {
+                    text: @tr("GO!");
+                    clicked => {
+                        HttpSingleton.request-http-query();
+                    }
+                }
+            }
+        }
+        ScrollView {
+            vertical-stretch: 1;
+            viewport-height: Math.max(self.height, fetchedContentText.height);
+            viewport-width: Math.max(self.width, fetchedContentText.width);
+            Rectangle {
+                background: darkgray;
+                fetchedContentText := Text {
+                    horizontal-alignment: TextHorizontalAlignment.left;
+                    color: black;
+                    text: HttpSingleton.fetched-content;
+                }
+            }
+        }
+    }
+}

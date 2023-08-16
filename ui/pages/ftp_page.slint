@@ -1,0 +1,102 @@
+import { Button, GroupBox, LineEdit, ProgressIndicator, VerticalBox } from "std-widgets.slint";
+import { Page } from "page.slint";
+
+export global FtpSingleton {
+    in-out property<string> url-download;
+    in-out property<string> url-upload;
+    in property<int> progress-percent-download: 0;
+    in property<int> progress-percent-upload: 0;
+    in property<bool> is-downloading: false;
+    in property<bool> is-uploading: false;
+    callback request-ftp-download();
+    callback request-ftp-upload();
+}
+
+export component FtpPage inherits Page {
+    title: @tr("FTP");
+
+    GroupBox {
+        title: @tr("FTP Download");
+        vertical-stretch: 0;
+        VerticalLayout {
+            GroupBox {
+                title: "URL";
+                HorizontalLayout {
+                    spacing: 10px;
+
+                    LineEdit {
+                        text: FtpSingleton.url-download;
+                    }
+                    Button {
+                        enabled: !FtpSingleton.is-downloading;
+                        text: @tr("GO!");
+                        clicked => {
+                            FtpSingleton.request-ftp-download();
+                        }
+                    }
+                }
+            }
+            GroupBox {
+                title: @tr("Progress");
+                HorizontalLayout {
+                    spacing: 10px;
+                    ProgressIndicator {
+                        horizontal-stretch: 1;
+                        progress: FtpSingleton.progress-percent-download/100;
+                    }
+                    Text {
+                        horizontal-alignment: TextHorizontalAlignment.right;
+                        horizontal-stretch: 0;
+                        min-width: 50px;
+                        text: "\{FtpSingleton.progress-percent-download} %";
+                    }
+                }
+            }
+        }
+    }
+
+    GroupBox {
+        title: @tr("FTP Upload");
+        vertical-stretch: 0;
+        VerticalLayout {
+            GroupBox {
+                title: "URL";
+                HorizontalLayout {
+                    spacing: 10px;
+
+                    LineEdit {
+                        text: FtpSingleton.url-upload;
+                    }
+                    Button {
+                        enabled: !FtpSingleton.is-uploading;
+                        text: @tr("GO!");
+                        clicked => {
+                            FtpSingleton.request-ftp-upload();
+                        }
+                    }
+                }
+            }
+            GroupBox {
+                title: @tr("Progress");
+                HorizontalLayout {
+                    spacing: 10px;
+                    ProgressIndicator {
+                        horizontal-stretch: 1;
+                        progress: FtpSingleton.progress-percent-upload/100;
+                    }
+                    Text {
+                        horizontal-alignment: TextHorizontalAlignment.right;
+                        horizontal-stretch: 0;
+                        min-width: 50px;
+                        text: "\{FtpSingleton.progress-percent-upload} %";
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        // spacer
+        vertical-stretch: 1;
+    }
+}

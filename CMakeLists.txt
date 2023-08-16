@@ -15,7 +15,7 @@ set(SOURCES
 )
 
 set(SLINT_SOURCES
-    ui/appwindow.slint
+    ui/app_window.slint
 )
 
 set(LIBRARIES

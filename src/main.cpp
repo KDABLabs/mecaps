@@ -2,7 +2,7 @@
 #include "mecaps/http_transfer_handle.h"
 #include "mecaps/mecaps.h"
 #include "mecaps/network_access_manager.h"
-#include "appwindow.h"
+#include "app_window.h"
 
 int main()
 {
@@ -23,6 +23,9 @@ int main()
 	// this *must* happen last, otherwise it will register a default platform
 	// and make createAndIntegrateWindow fail with an AlreadySet error
 	auto slintApp = AppWindow::create();
+	auto &uiPageCounter = slintApp->global<CounterSingleton>();
+	auto &uiPageFtp = slintApp->global<FtpSingleton>();
+	auto &uiPageHttp = slintApp->global<HttpSingleton>();
 
 	// set up everything related to CURL
 	NetworkAccessManager &manager = NetworkAccessManager::instance();
@@ -30,15 +33,15 @@ int main()
 	HttpTransferHandle *httpTransfer;
 	auto onHttpExampleTransferFinished = [&](int result) {
 		spdlog::info("HttpTransferHandle::finished() signal triggered for URL {}", httpTransfer->url());
-		if (result == CURLcode::CURLE_OK) {
-			spdlog::info("Data:\n{}", httpTransfer->dataRead());
-			slintApp->set_fetchedContent(slint::SharedString(httpTransfer->dataRead()));
-		}
-		else {
-			slintApp->set_fetchedContent(slint::SharedString());
-		}
-
+		const auto fetchedContent = (result == CURLcode::CURLE_OK) ? httpTransfer->dataRead() : std::string();
+		uiPageHttp.set_fetched_content(slint::SharedString(fetchedContent));
 		delete httpTransfer;
+	};
+	auto startHttpQuery = [&]() {
+		const std::string url = uiPageHttp.get_url().data();
+		httpTransfer = new HttpTransferHandle(url, false);
+		httpTransfer->finished.connect(onHttpExampleTransferFinished);
+		manager.registerTransfer(httpTransfer);
 	};
 
 	File ftpFile = File("ls-lR.gz");
@@ -47,49 +50,48 @@ int main()
 
 	auto onFtpExampleUploadTransferFinished = [&]() {
 		spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
+		uiPageFtp.set_is_uploading(false);
 		delete ftpUploadTransfer;
 	};
 	auto onFtpExampleUploadTransferProgressPercentChanged = [&]() {
-		spdlog::info("FtpUploadTransferHandle::progressChanged() upload progress: {} %", ftpUploadTransfer->progressPercent());
+		uiPageFtp.set_progress_percent_upload(ftpUploadTransfer->progressPercent.get());
 	};
 	auto startFtpUpload = [&]() {
-		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, "ftp://ftp.cs.brown.edu/incoming/ls-lR.gz", true);
+		const std::string url = uiPageFtp.get_url_upload().data();
+		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
 		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
 		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
 		manager.registerTransfer(ftpUploadTransfer);
+		uiPageFtp.set_is_uploading(true);
 	};
 
 	auto onFtpExampleDownloadTransferFinished = [&]() {
 		spdlog::info("FtpDownloadTransferHandle::finished() - downloaded {} bytes", ftpDownloadTransfer->numberOfBytesTransferred.get());
+		uiPageFtp.set_is_downloading(false);
 		delete ftpDownloadTransfer;
 	};
 	auto onFtpExampleDownloadTransferProgressPercentChanged = [&]() {
-		spdlog::info("FtpDownloadTransferHandle::progressChanged() download progress: {} %", ftpDownloadTransfer->progressPercent());
+		uiPageFtp.set_progress_percent_download(ftpDownloadTransfer->progressPercent.get());
 	};
 	auto startFtpDownload = [&]() {
-		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, "ftp://ftp-stud.hs-esslingen.de/debian/ls-lR.gz", false);
-		ftpDownloadTransfer->finished.connect(startFtpUpload);
+		const std::string url = uiPageFtp.get_url_download().data();
+		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
 		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
 		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);
 		manager.registerTransfer(ftpDownloadTransfer);
+		uiPageFtp.set_is_downloading(true);
 	};
 
-	// start FTP download which will trigger FTP upload afterwards
-	startFtpDownload();
+	// set up curl related UI defaults
+	uiPageHttp.set_url("https://example.com");
+	uiPageFtp.set_url_download("ftp://ftp-stud.hs-esslingen.de/debian/ls-lR.gz");
+	uiPageFtp.set_url_upload("ftp://ftp.cs.brown.edu/incoming/ls-lR.gz");
 
 	// set up application logic
-	slintApp->on_request_increase_value(
-		[&] {
-			slintApp->set_counter(slintApp->get_counter() + 1);
-		});
-
-	slintApp->on_query_url(
-		[&] {
-			const auto url = slintApp->get_url().data();
-			httpTransfer = new HttpTransferHandle(url, false);
-			httpTransfer->finished.connect(onHttpExampleTransferFinished);
-			manager.registerTransfer(httpTransfer);
-		});
+	uiPageCounter.on_request_increase_value( [&] { uiPageCounter.set_counter(uiPageCounter.get_counter() + 1); } );
+	uiPageHttp.on_request_http_query( [&] { startHttpQuery(); } );
+	uiPageFtp.on_request_ftp_download( [&] { startFtpDownload(); } );
+	uiPageFtp.on_request_ftp_upload( [&] { startFtpUpload(); } );
 
 	slintApp->run();
 

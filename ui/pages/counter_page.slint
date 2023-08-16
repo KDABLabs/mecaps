@@ -1,0 +1,39 @@
+import { Button, GroupBox, VerticalBox } from "std-widgets.slint";
+import { Page } from "page.slint";
+
+export global CounterSingleton {
+    in-out property<int> counter: 0;
+    callback request-increase-value();
+}
+
+export component CounterPage inherits Page {
+    title: @tr("Counter");
+    description: @tr("Progress happens in increments.");
+
+    VerticalBox {
+        VerticalBox {
+            vertical-stretch: 1;
+            Text {
+                horizontal-alignment: TextHorizontalAlignment.center;
+                vertical-alignment: TextVerticalAlignment.bottom;
+                text: "Counter";
+            }
+            Text {
+                horizontal-alignment: TextHorizontalAlignment.center;
+                vertical-alignment: TextVerticalAlignment.top;
+                font-size: 100px;
+                text: "\{CounterSingleton.counter}";
+            }
+        }
+
+        GroupBox {
+            vertical-stretch: 0;
+            Button {
+                text: @tr("Click Me");
+                clicked => {
+                    CounterSingleton.request-increase-value();
+                }
+            }
+        }
+    }
+}

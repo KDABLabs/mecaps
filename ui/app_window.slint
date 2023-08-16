@@ -1,0 +1,39 @@
+import { StyleMetrics } from "std-widgets.slint";
+import { SideBar } from "widgets/side_bar.slint";
+import { CounterPage, CounterSingleton } from "pages/counter_page.slint";
+import { FtpPage, FtpSingleton } from "pages/ftp_page.slint";
+import { HttpPage, HttpSingleton } from "pages/http_page.slint";
+
+export { FtpSingleton, HttpSingleton, CounterSingleton }
+
+export component AppWindow inherits Window {
+
+    preferred-width: 700px;
+    preferred-height: 500px;
+    title: @tr("mecaps demo");
+
+    sideBar := SideBar {
+        title: @tr("mecaps demo");
+        width: 200px;
+        x: 0;
+        model: [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP")];
+    }
+
+    counter-page := CounterPage {
+        visible: (sideBar.current-item == 0);
+        width: root.width - sideBar.width;
+        x: sideBar.x+sideBar.width;
+    }
+
+    http-page := HttpPage {
+        visible: (sideBar.current-item == 1);
+        width: root.width - sideBar.width;
+        x: sideBar.x+sideBar.width;
+    }
+
+    ftp-page := FtpPage {
+        visible: (sideBar.current-item == 2);
+        width: root.width - sideBar.width;
+        x: sideBar.x+sideBar.width;
+    }
+}
