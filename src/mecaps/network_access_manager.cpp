@@ -158,35 +158,25 @@ bool NetworkAccessManager::checkCurlMultiResultAndDoDebugPrints(CURLMcode c) con
 
 void NetworkAccessManager::FileDescriptorNotifierRegistry::manageFileDescriptorNotifiers(curl_socket_t socket, int eventType)
 {
-	// TODO -> translating CURL_POLL events to KDFoundation::FileDescriptorNotifiers with respective NotificationTypes can probalby be done more elegant than this, works for now though
-	switch (eventType) {
-	case CURL_POLL_IN:
-		registerFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
-		unregisterFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
-		break;
-	case CURL_POLL_OUT:
-		unregisterFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
-		registerFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
-		break;
-	case CURL_POLL_INOUT:
-		registerFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
-		registerFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
-		break;
-	case CURL_POLL_REMOVE:
-		unregisterFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
-		unregisterFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
-		break;
-	default:
+	if (eventType > CURL_POLL_REMOVE) {
 		spdlog::warn("NetworkAccessManager::socketCallback() - called with unknown eventType");
-		break;
+		return;
 	}
+
+	((eventType == CURL_POLL_IN) || (eventType == CURL_POLL_INOUT))
+		? registerFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read)
+		: unregisterFileDescriptorNotifier(socket, readMap, FileDescriptorNotifier::NotificationType::Read);
+
+	((eventType == CURL_POLL_OUT) || (eventType == CURL_POLL_INOUT))
+		? registerFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write)
+		: unregisterFileDescriptorNotifier(socket, writeMap, FileDescriptorNotifier::NotificationType::Write);
 }
 
 void NetworkAccessManager::FileDescriptorNotifierRegistry::registerFileDescriptorNotifier(int nfd, FileDescriptorNotifierMap &fdnMap, FileDescriptorNotifier::NotificationType fdnType)
 {
 	spdlog::debug("NetworkAccessManager::registerFileDescriptorNotifier() - fd:{}, {}", nfd, s_notificationTypeToString.at(fdnType));
 	if (fdnMap.contains(nfd)) {
-		return; // TODO -> with the present implementation this will happen on a regular basis and is not critical
+		return;
 	}
 
 	fdnMap[nfd] = std::make_unique<FileDescriptorNotifier>(nfd, fdnType);
@@ -197,7 +187,7 @@ void NetworkAccessManager::FileDescriptorNotifierRegistry::unregisterFileDescrip
 {
 	spdlog::debug("NetworkAccessManager::unregisterFileDescriptorNotifier() - fd:{}, {}", nfd, s_notificationTypeToString.at(fdnType));
 	if (!fdnMap.contains(nfd)) {
-		return; // TODO -> with the present implementation this will happen on a regular basis and is not critical
+		return;
 	}
 
 	fdnMap[nfd]->triggered.disconnectAll();
