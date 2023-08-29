@@ -15,7 +15,7 @@ class AbstractFtpTransferHandle : public AbstractTransferHandle
 	Property<curl_off_t> numberOfBytesTransferred { 0 };
 	Property<curl_off_t> totalNumberOfBytesToTransfer { 0 };
 
-	Property<curl_off_t> progressPercent = makeBoundProperty(calculateProgressPercent, numberOfBytesTransferred, totalNumberOfBytesToTransfer);
+	Property<int> progressPercent = makeBoundProperty(calculateProgressPercent, numberOfBytesTransferred, totalNumberOfBytesToTransfer);
 
   protected:
 	virtual int progressCallbackImpl(curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) = 0;
@@ -23,7 +23,7 @@ class AbstractFtpTransferHandle : public AbstractTransferHandle
 
   private:
 	static int progressCallback(AbstractFtpTransferHandle *self, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow);
-	static curl_off_t calculateProgressPercent(curl_off_t numberOfBytesTransferred, curl_off_t totalNumberOfBytesToTransfer);
+	static int calculateProgressPercent(curl_off_t numberOfBytesTransferred, curl_off_t totalNumberOfBytesToTransfer);
 };
 
 

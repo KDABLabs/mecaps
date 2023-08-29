@@ -17,9 +17,9 @@ int AbstractFtpTransferHandle::progressCallback(AbstractFtpTransferHandle *self,
 	return self->progressCallbackImpl(dltotal, dlnow, ultotal, ulnow);
 }
 
-curl_off_t AbstractFtpTransferHandle::calculateProgressPercent(curl_off_t numberOfBytesTransferred, curl_off_t totalNumberOfBytesToTransfer)
+int AbstractFtpTransferHandle::calculateProgressPercent(curl_off_t numberOfBytesTransferred, curl_off_t totalNumberOfBytesToTransfer)
 {
-	return totalNumberOfBytesToTransfer ? ((100 * numberOfBytesTransferred)/totalNumberOfBytesToTransfer) : 0;
+	return std::round(totalNumberOfBytesToTransfer ? ((100 * numberOfBytesTransferred)/totalNumberOfBytesToTransfer) : 0);
 }
 
 FtpDownloadTransferHandle::FtpDownloadTransferHandle(File &file, std::string url, bool verbose)
