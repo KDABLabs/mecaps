@@ -1,0 +1,148 @@
+import { Button, ComboBox, GroupBox, LineEdit, SpinBox } from "std-widgets.slint";
+import { Page } from "page.slint";
+
+export enum MqttConnectionState { connecting, connected, disconnecting, disconnected }
+export enum MqttSubscriptionState { subscribing, subscribed, unsubscribing, unsubscribed }
+
+export global MqttSingleton {
+    in-out property<string> url;
+    in-out property<string> topic;
+    in-out property<string> payload;
+    in-out property<int> port;
+    in property<MqttConnectionState> connection-state: MqttConnectionState.disconnected;
+    in property<MqttSubscriptionState> subscription-state: MqttSubscriptionState.unsubscribed;
+    in property<[string]> subscribed-topics;
+    in property<string> message: @tr("no message received yet");
+    in property<bool> is-topic-valid: false;
+    callback request-mqtt-connect();
+    callback request-mqtt-disconnect();
+    callback request-mqtt-subscribe();
+    callback request-mqtt-unsubscribe(string);
+    callback request-mqtt-publish();
+    callback user-edited-topic();
+}
+
+export component MqttPage inherits Page {
+    title: @tr("MQTT");
+    description: @tr("mosquitto integration");
+
+    property<bool> is-connected: (MqttSingleton.connection-state == MqttConnectionState.connected);
+    property<bool> is-disconnected: (MqttSingleton.connection-state == MqttConnectionState.disconnected);
+    property<bool> is-subscribe-unsubscribe-op-allowed: is-connected &&
+                                                        (MqttSingleton.subscription-state != MqttSubscriptionState.subscribing) &&
+                                                        (MqttSingleton.subscription-state != MqttSubscriptionState.unsubscribing);
+    property<bool> is-subscribe-allowed: is-subscribe-unsubscribe-op-allowed &&
+                                         MqttSingleton.is-topic-valid;
+    property<bool> is-unsubscribe-allowed: is-subscribe-unsubscribe-op-allowed &&
+                                           (MqttSingleton.subscription-state == MqttSubscriptionState.subscribed);
+    property<bool> is-publish-allowed: (MqttSingleton.connection-state == MqttConnectionState.connected) &&
+                                       (MqttSingleton.subscribed-topics.length != 0);
+
+    GridLayout {
+        vertical-stretch: 0;
+        spacing: 10px;
+        padding-top: 10px;
+
+        Row {
+            Text {
+                text: @tr("Connect");
+                font-size: 16px;
+            }
+        }
+        Row {
+            HorizontalLayout {
+                LineEdit {
+                    enabled: root.is-disconnected;
+                    text <=> MqttSingleton.url;
+                }
+                SpinBox {
+                    enabled: root.is-disconnected;
+                    maximum: 65535;
+                    minimum: 0;
+                    value <=> MqttSingleton.port;
+                }
+            }
+            Button {
+                enabled: root.is-connected || root.is-disconnected;
+                text: !root.is-connected ? @tr("CONNECT") : @tr("DISCONNECT");
+                clicked => {
+                    !root.is-connected ? MqttSingleton.request-mqtt-connect() : MqttSingleton.request-mqtt-disconnect();
+                }
+            }
+        }
+        Row {
+            Text {
+                text: @tr("Subscribe");
+                font-size: 16px;
+            }
+        }
+        Row {
+            LineEdit {
+                enabled: root.is-connected;
+                text <=> MqttSingleton.topic;
+                placeholder-text: @tr("no topic set");
+                edited => {
+                    MqttSingleton.user-edited-topic();
+                }
+            }
+            Button {
+                enabled: root.is-subscribe-allowed;
+                text: @tr("SUBSCRIBE");
+                clicked => {
+                    MqttSingleton.request-mqtt-subscribe();
+                }
+            }
+        }
+        Row {
+            unsubscribe-topic := ComboBox {
+                enabled: root.is-unsubscribe-allowed;
+                model: MqttSingleton.subscribed-topics;
+            }
+            Button {
+                enabled: root.is-unsubscribe-allowed  && (unsubscribe-topic.current-index != -1);
+                text: @tr("UNSUBSCRIBE");
+                clicked => {
+                    MqttSingleton.request-mqtt-unsubscribe(unsubscribe-topic.current-value);
+                    unsubscribe-topic.current-index = -1;
+                    unsubscribe-topic.current-value = ""; // TODO -> remove as soon as issue is resolved: https://github.com/slint-ui/slint/issues/3628
+                }
+            }
+        }
+        Row {
+            Text {
+                text: @tr("Publish");
+                font-size: 16px;
+            }
+        }
+        Row {
+            ComboBox {
+                enabled: root.is-publish-allowed;
+                model: MqttSingleton.subscribed-topics;
+            }
+            Button {
+                enabled: root.is-publish-allowed;
+                text: @tr("PUBLISH");
+                clicked => {
+                    MqttSingleton.request-mqtt-publish();
+                }
+            }
+        }
+    }
+    LineEdit {
+        enabled: root.is-publish-allowed;
+        text <=> MqttSingleton.payload;
+    }
+    GroupBox {
+        title: "Received Message";
+        HorizontalLayout {
+            spacing: 10px;
+            Text {
+                text: MqttSingleton.message;
+            }
+        }
+    }
+    Rectangle {
+        // spacer
+        vertical-stretch: 1;
+    }
+}

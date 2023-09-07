@@ -3,8 +3,9 @@ import { SideBar } from "widgets/side_bar.slint";
 import { CounterPage, CounterSingleton } from "pages/counter_page.slint";
 import { FtpPage, FtpSingleton } from "pages/ftp_page.slint";
 import { HttpPage, HttpSingleton } from "pages/http_page.slint";
+import { MqttPage, MqttSingleton } from "pages/mqtt_page.slint";
 
-export { FtpSingleton, HttpSingleton, CounterSingleton }
+export { CounterSingleton, FtpSingleton, HttpSingleton, MqttSingleton }
 
 export component AppWindow inherits Window {
 
@@ -16,7 +17,7 @@ export component AppWindow inherits Window {
         title: @tr("mecaps demo");
         width: 200px;
         x: 0;
-        model: [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP")];
+        model: [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP"), @tr("Menu" => "MQTT")];
     }
 
     counter-page := CounterPage {
@@ -33,6 +34,12 @@ export component AppWindow inherits Window {
 
     ftp-page := FtpPage {
         visible: (sideBar.current-item == 2);
+        width: root.width - sideBar.width;
+        x: sideBar.x+sideBar.width;
+    }
+
+    mqtt-page := MqttPage {
+        visible: (sideBar.current-item == 3);
         width: root.width - sideBar.width;
         x: sideBar.x+sideBar.width;
     }

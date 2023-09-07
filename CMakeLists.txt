@@ -10,6 +10,7 @@ set(SOURCES
     src/mecaps/ftp_transfer_handle.cpp
     src/mecaps/http_transfer_handle.cpp
     src/mecaps/mecaps.cpp
+    src/mecaps/mqtt.cpp
     src/mecaps/network_access_manager.cpp
     src/mecaps/slint_wrapper_window.cpp
     src/mecaps/window_adapter.cpp
@@ -26,6 +27,7 @@ set(LIBRARIES
     KDUtils::KDFoundation
     KDUtils::KDGui
     CURL::libcurl
+    PkgConfig::Mosquitto
 )
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/ECM/find-modules")

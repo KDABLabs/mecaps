@@ -15,4 +15,6 @@ class ApplicationEngine
 	void InitCounterDemo(const CounterSingleton &uiPageCounter);
 	void InitHttpDemo(const HttpSingleton &httpSingleton);
 	void InitFtpDemo(const FtpSingleton &ftpSingleton);
+	void InitMqttDemo(const MqttSingleton &mqttSingleton);
+	void DeinitMqttDemo();
 };
