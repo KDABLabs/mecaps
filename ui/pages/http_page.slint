@@ -17,7 +17,7 @@ export component HttpPage inherits Page {
             HorizontalLayout {
                 spacing: 10px;
 
-                line-edit-url := LineEdit {
+                LineEdit {
                     text <=> HttpSingleton.url;
                 }
                 Button {
