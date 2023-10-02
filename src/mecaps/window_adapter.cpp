@@ -42,7 +42,7 @@ KDWindowAdapter::KDWindowAdapter() noexcept
 	m_kdWindow = std::make_unique<SlintWrapperWindow>(this);
 	m_kdWindow->create();
 
-	auto slintSize = physical_size();
+	auto slintSize = size();
 
 	auto *app = KDGui::GuiApplication::instance();
 	assert(app != nullptr);
@@ -146,14 +146,14 @@ void KDWindowAdapter::request_redraw()
 		m_kdWindow.get(), std::make_unique<KDFoundation::UpdateEvent>());
 }
 
-void KDWindowAdapter::render() const
+void KDWindowAdapter::render()
 {
-	assert(window().size() == physical_size());
+	assert(window().size() == size());
 	slint_platform::update_timers_and_animations();
 	m_renderer->render();
 }
 
-slint::PhysicalSize KDWindowAdapter::physical_size() const
+slint::PhysicalSize KDWindowAdapter::size()
 {
 	return slint::PhysicalSize(
 		{m_kdWindow->width.get(), m_kdWindow->height.get()});
