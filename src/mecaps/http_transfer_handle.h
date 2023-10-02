@@ -6,7 +6,7 @@
 class HttpTransferHandle : public AbstractTransferHandle
 {
   public:
-	explicit HttpTransferHandle(std::string url, bool verbose = false);
+	explicit HttpTransferHandle(const std::string &url, bool verbose = false);
 
 	std::string dataRead() const;
 

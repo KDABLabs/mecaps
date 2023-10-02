@@ -9,7 +9,7 @@ class AbstractTransferHandle
 	friend class NetworkAccessManager;
 
   public:
-	explicit AbstractTransferHandle(std::string url, bool verbose = false);
+	explicit AbstractTransferHandle(const std::string &url, bool verbose = false);
 	~AbstractTransferHandle();
 
 	KDBindings::Signal<int> finished;

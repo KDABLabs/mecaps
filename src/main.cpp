@@ -38,7 +38,7 @@ int main()
 		delete httpTransfer;
 	};
 	auto startHttpQuery = [&]() {
-		const std::string url = uiPageHttp.get_url().data();
+		const std::string &url = uiPageHttp.get_url().data();
 		httpTransfer = new HttpTransferHandle(url, false);
 		httpTransfer->finished.connect(onHttpExampleTransferFinished);
 		manager.registerTransfer(httpTransfer);
@@ -57,7 +57,7 @@ int main()
 		uiPageFtp.set_progress_percent_upload(ftpUploadTransfer->progressPercent.get());
 	};
 	auto startFtpUpload = [&]() {
-		const std::string url = uiPageFtp.get_url_upload().data();
+		const std::string &url = uiPageFtp.get_url_upload().data();
 		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
 		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
 		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
@@ -74,7 +74,7 @@ int main()
 		uiPageFtp.set_progress_percent_download(ftpDownloadTransfer->progressPercent.get());
 	};
 	auto startFtpDownload = [&]() {
-		const std::string url = uiPageFtp.get_url_download().data();
+		const std::string &url = uiPageFtp.get_url_download().data();
 		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
 		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
 		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);

@@ -2,7 +2,7 @@
 #include <cmath>
 #include <spdlog/spdlog.h>
 
-AbstractFtpTransferHandle::AbstractFtpTransferHandle(std::string url, bool verbose)
+AbstractFtpTransferHandle::AbstractFtpTransferHandle(const std::string &url, bool verbose)
 	: AbstractTransferHandle(url, verbose)
 	, m_file{nullptr}
 {
@@ -22,7 +22,7 @@ int AbstractFtpTransferHandle::calculateProgressPercent(curl_off_t numberOfBytes
 	return std::round(totalNumberOfBytesToTransfer ? ((100 * numberOfBytesTransferred)/totalNumberOfBytesToTransfer) : 0);
 }
 
-FtpDownloadTransferHandle::FtpDownloadTransferHandle(File &file, std::string url, bool verbose)
+FtpDownloadTransferHandle::FtpDownloadTransferHandle(File &file, const std::string &url, bool verbose)
 	: AbstractFtpTransferHandle(url, verbose)
 {
 	m_file = fopen(file.path().c_str(), "wb");
@@ -53,7 +53,7 @@ void FtpDownloadTransferHandle::transferDoneCallbackImpl(CURLcode result)
 	}
 }
 
-FtpUploadTransferHandle::FtpUploadTransferHandle(File &file, std::string url, bool verbose)
+FtpUploadTransferHandle::FtpUploadTransferHandle(File &file, const std::string &url, bool verbose)
 	: AbstractFtpTransferHandle(url, verbose)
 {
 	m_file = fopen(file.path().c_str(), "rb");
