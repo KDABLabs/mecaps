@@ -146,6 +146,12 @@ void KDWindowAdapter::request_redraw()
 		m_kdWindow.get(), std::make_unique<KDFoundation::UpdateEvent>());
 }
 
+void KDWindowAdapter::set_size(slint::PhysicalSize size)
+{
+	m_kdWindow->width.set(size.width);
+	m_kdWindow->height.set(size.height);
+}
+
 void KDWindowAdapter::render()
 {
 	assert(window().size() == size());

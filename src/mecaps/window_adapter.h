@@ -10,12 +10,15 @@ class KDWindowAdapter : public slint_platform::WindowAdapter
 {
   public:
 	KDWindowAdapter() noexcept;
+
 	inline KDGui::Window &kdGuiWindow() const { return *m_kdWindow; }
 	slint_platform::AbstractRenderer &renderer() override;
-	slint::PhysicalSize size() override;
 
 	void set_visible(bool) override;
 	void request_redraw() override;
+
+	void set_size(slint::PhysicalSize size) override;
+	slint::PhysicalSize size() override;
 
 	void render();
 

@@ -3,13 +3,13 @@
 
 namespace mecaps {
 
-// TODO: once slint implements set_size in their CppWindowAdapter, we'll
-// actually handle creating the window with a given size
-KDGui::Window *createAndIntegrateWindow(slint::PhysicalSize /*windowSize*/)
+KDGui::Window *createAndIntegrateWindow(slint::PhysicalSize windowSize)
 {
 	auto platform = std::make_unique<mecaps::KDSlintPlatform>();
 	auto windowAdapter = std::make_unique<mecaps::KDWindowAdapter>();
 	auto *window = &windowAdapter->kdGuiWindow();
+
+	windowAdapter->set_size(windowSize);
 
 	platform->aquireWindowAdapter(std::move(windowAdapter));
 	slint_platform::set_platform(std::move(platform));
