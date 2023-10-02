@@ -53,8 +53,8 @@ int main()
 		uiPageFtp.set_is_uploading(false);
 		delete ftpUploadTransfer;
 	};
-	auto onFtpExampleUploadTransferProgressPercentChanged = [&]() {
-		uiPageFtp.set_progress_percent_upload(ftpUploadTransfer->progressPercent.get());
+	auto onFtpExampleUploadTransferProgressPercentChanged = [&](const int &progressPercent) {
+		uiPageFtp.set_progress_percent_upload(progressPercent);
 	};
 	auto startFtpUpload = [&]() {
 		const std::string &url = uiPageFtp.get_url_upload().data();
@@ -70,8 +70,8 @@ int main()
 		uiPageFtp.set_is_downloading(false);
 		delete ftpDownloadTransfer;
 	};
-	auto onFtpExampleDownloadTransferProgressPercentChanged = [&]() {
-		uiPageFtp.set_progress_percent_download(ftpDownloadTransfer->progressPercent.get());
+	auto onFtpExampleDownloadTransferProgressPercentChanged = [&](const int &progressPercent) {
+		uiPageFtp.set_progress_percent_download(progressPercent);
 	};
 	auto startFtpDownload = [&]() {
 		const std::string &url = uiPageFtp.get_url_download().data();
