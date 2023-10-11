@@ -117,6 +117,8 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
 	uiPageMqtt.set_subscribed_topics(mqttSubscriptionsModel);
 
+	uiPageMqtt.set_username("ro");
+	uiPageMqtt.set_password("readonly");
 	uiPageMqtt.set_url("test.mosquitto.org");
 	uiPageMqtt.set_port(1883);
 	uiPageMqtt.set_topic("my_test_topic");
@@ -185,9 +187,15 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 	mqttClient.msgReceived.connect(onMqttMessageReceived);
 
 	auto connectToMqttBroker = [&]() {
+		const auto setUsernameAndPasswordOnConnect = uiPageMqtt.get_set_username_and_password_on_connect();
+		const std::string username = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_username().data() : std::string();
+		const std::string password = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_password().data() : std::string();
+
 		const std::string url = uiPageMqtt.get_url().data();
-		const int port = uiPageMqtt.get_port();
-		mqttClient.connect(url, port);
+		const auto port = uiPageMqtt.get_port();
+
+		mqttClient.setUsernameAndPassword(username, password);
+		mqttClient.connect(url, port, 10);
 	};
 	uiPageMqtt.on_request_mqtt_connect( [&] { connectToMqttBroker(); });
 

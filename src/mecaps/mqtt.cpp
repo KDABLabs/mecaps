@@ -49,6 +49,20 @@ MQTT::~MQTT()
 
 }
 
+int MQTT::setUsernameAndPassword(const std::string &username, const std::string &password)
+{
+	spdlog::debug("MQTT::setUsernameAndPassword()");
+
+	if (connectionState.get() != ConnectionState::DISCONNECTED) {
+		spdlog::error("MQTT::setUsernameAndPassword() - Setting AUTH is only allowed when disconnected.");
+		return MOSQ_ERR_UNKNOWN;
+	}
+
+	const auto result = mosquittopp::username_pw_set(username.c_str(), password.c_str());
+	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::setUsernameAndPassword()");
+	return result;
+}
+
 int MQTT::connect(const std::string &host, int port, int keepalive)
 {
 	spdlog::debug("MQTT::connect() - host:{}, port:{}, keepalive:{})", host, port, keepalive);

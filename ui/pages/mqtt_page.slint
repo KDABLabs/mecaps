@@ -1,14 +1,17 @@
-import { Button, ComboBox, GroupBox, LineEdit, SpinBox } from "std-widgets.slint";
+import { Button, ComboBox, GroupBox, LineEdit, SpinBox, Switch } from "std-widgets.slint";
 import { Page } from "page.slint";
 
 export enum MqttConnectionState { connecting, connected, disconnecting, disconnected }
 export enum MqttSubscriptionState { subscribing, subscribed, unsubscribing, unsubscribed }
 
 export global MqttSingleton {
+    in-out property<string> username;
+    in-out property<string> password;
     in-out property<string> url;
     in-out property<string> topic;
     in-out property<string> payload;
     in-out property<int> port;
+    in-out property<bool> set-username-and-password-on-connect;
     in property<MqttConnectionState> connection-state: MqttConnectionState.disconnected;
     in property<MqttSubscriptionState> subscription-state: MqttSubscriptionState.unsubscribed;
     in property<[string]> subscribed-topics;
@@ -47,6 +50,27 @@ export component MqttPage inherits Page {
             Text {
                 text: @tr("Connect");
                 font-size: 16px;
+            }
+        }
+        Row {
+            HorizontalLayout {
+                lineedit-username := LineEdit {
+                    horizontal-stretch: 3;
+                    enabled: root.is-disconnected;
+                    text <=> MqttSingleton.username;
+                    placeholder-text: @tr("no username set");
+                }
+                lineedit-password := LineEdit {
+                    horizontal-stretch: 2;
+                    enabled: root.is-disconnected;
+                    input-type: InputType.password;
+                    text <=> MqttSingleton.password;
+                    placeholder-text: @tr("no password set");
+                }
+            }
+            Switch {
+                enabled: root.is-disconnected;
+                checked <=> MqttSingleton.set-username-and-password-on-connect;
             }
         }
         Row {
