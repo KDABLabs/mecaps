@@ -5,6 +5,7 @@ set (CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
     src/main.cpp
+    src/mecaps/application_engine.cpp
     src/mecaps/abstract_transfer_handle.cpp
     src/mecaps/ftp_transfer_handle.cpp
     src/mecaps/http_transfer_handle.cpp
