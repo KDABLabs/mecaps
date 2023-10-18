@@ -40,6 +40,7 @@ class MQTT : private mosqpp::mosquittopp
 	KDBindings::Signal<> error;
 
 	int setUsernameAndPassword(const std::string &username, const std::string &password);
+	int setWill(const std::string &topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false);
 
 	int connect(const std::string &host, int port = 1883, int keepalive = 60);
 	int disconnect();

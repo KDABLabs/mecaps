@@ -10,7 +10,10 @@ export global MqttSingleton {
     in-out property<string> url;
     in-out property<string> topic;
     in-out property<string> payload;
+    in-out property<string> last-will-topic;
+    in-out property<string> last-will-payload;
     in-out property<int> port;
+    in-out property<bool> set-last-will-on-connect;
     in-out property<bool> set-username-and-password-on-connect;
     in property<MqttConnectionState> connection-state: MqttConnectionState.disconnected;
     in property<MqttSubscriptionState> subscription-state: MqttSubscriptionState.unsubscribed;
@@ -46,6 +49,32 @@ export component MqttPage inherits Page {
         spacing: 10px;
         padding-top: 10px;
 
+        Row {
+            Text {
+                text: @tr("Last Will");
+                font-size: 16px;
+            }
+        }
+        Row {
+            HorizontalLayout {
+                LineEdit {
+                    horizontal-stretch: 3;
+                    enabled: root.is-disconnected;
+                    text <=> MqttSingleton.last-will-topic;
+                    placeholder-text: @tr("no topic set");
+                }
+                LineEdit {
+                    horizontal-stretch: 2;
+                    enabled: root.is-disconnected;
+                    text <=> MqttSingleton.last-will-payload;
+                    placeholder-text: @tr("no payload set");
+                }
+            }
+            Switch {
+                enabled: root.is-disconnected;
+                checked <=> MqttSingleton.set-last-will-on-connect;
+            }
+        }
         Row {
             Text {
                 text: @tr("Connect");

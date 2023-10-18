@@ -117,6 +117,8 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
 	uiPageMqtt.set_subscribed_topics(mqttSubscriptionsModel);
 
+	uiPageMqtt.set_last_will_topic("farewell");
+	uiPageMqtt.set_last_will_payload("boot(m_incarnations[++i]);");
 	uiPageMqtt.set_username("ro");
 	uiPageMqtt.set_password("readonly");
 	uiPageMqtt.set_url("test.mosquitto.org");
@@ -187,6 +189,10 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 	mqttClient.msgReceived.connect(onMqttMessageReceived);
 
 	auto connectToMqttBroker = [&]() {
+		const auto setLastWill = uiPageMqtt.get_set_last_will_on_connect();
+		const std::string lastWillTopic = uiPageMqtt.get_last_will_topic().data();
+		const std::string lastWillPayload = uiPageMqtt.get_last_will_payload().data();
+
 		const auto setUsernameAndPasswordOnConnect = uiPageMqtt.get_set_username_and_password_on_connect();
 		const std::string username = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_username().data() : std::string();
 		const std::string password = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_password().data() : std::string();
@@ -194,6 +200,8 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		const auto &url = Url(uiPageMqtt.get_url().data());
 		const auto port = uiPageMqtt.get_port();
 
+		if (setLastWill)
+			mqttClient.setWill(lastWillTopic, lastWillPayload.size(), &lastWillPayload);
 		mqttClient.setUsernameAndPassword(username, password);
 		mqttClient.connect(url.url(), port, 10);
 	};

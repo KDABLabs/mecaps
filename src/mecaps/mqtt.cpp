@@ -63,6 +63,20 @@ int MQTT::setUsernameAndPassword(const std::string &username, const std::string 
 	return result;
 }
 
+int MQTT::setWill(const std::string &topic, int payloadlen, const void *payload, int qos, bool retain)
+{
+	spdlog::debug("MQTT::setWill() - topic:{}, qos:{}, retain:{})", topic, qos, retain);
+
+	if (connectionState.get() != ConnectionState::DISCONNECTED) {
+		spdlog::error("MQTT::setWill() - Setting will is only allowed when disconnected.");
+		return MOSQ_ERR_UNKNOWN;
+	}
+
+	const auto result = mosquittopp::will_set(topic.c_str(), payloadlen, payload, qos, retain);
+	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::setWill()");
+	return result;
+}
+
 int MQTT::connect(const std::string &host, int port, int keepalive)
 {
 	spdlog::debug("MQTT::connect() - host:{}, port:{}, keepalive:{})", host, port, keepalive);
