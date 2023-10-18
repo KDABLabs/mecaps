@@ -2,14 +2,17 @@
 
 #include <curl/curl.h>
 #include <kdbindings/signal.h>
+#include <KDUtils/url.h>
 #include <string>
+
+using namespace KDUtils;
 
 class AbstractTransferHandle
 {
 	friend class NetworkAccessManager;
 
   public:
-	explicit AbstractTransferHandle(const std::string &url, bool verbose = false);
+	explicit AbstractTransferHandle(const Url &url, bool verbose = false);
 	~AbstractTransferHandle();
 
 	KDBindings::Signal<int> finished;
@@ -17,7 +20,7 @@ class AbstractTransferHandle
 	static AbstractTransferHandle *fromCurlEasyHandle(CURL *easyHandle);
 
 	CURL *handle() const;
-	const std::string &url() const;
+	const Url &url() const;
 	std::string error() const;
 
   protected:
@@ -26,7 +29,7 @@ class AbstractTransferHandle
 	virtual void transferDoneCallbackImpl(CURLcode result) {}
 
 	CURL *m_handle;
-	std::string m_url;
+	Url m_url;
 	char m_errorBuffer[CURL_ERROR_SIZE];
 
   private:

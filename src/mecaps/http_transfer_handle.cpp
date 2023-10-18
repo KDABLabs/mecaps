@@ -1,6 +1,6 @@
 #include "http_transfer_handle.h"
 
-HttpTransferHandle::HttpTransferHandle(const std::string &url, bool verbose)
+HttpTransferHandle::HttpTransferHandle(const Url &url, bool verbose)
 	: AbstractTransferHandle(url, verbose)
 {
 	// switch off progress meter for HTTP requests

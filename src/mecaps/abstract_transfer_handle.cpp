@@ -4,7 +4,7 @@
 // TODO -> allow for reusing handles for multiple transfers
 // "re-using handles is a key to good performance with libcurl" -> see https://curl.se/libcurl/c/curl_easy_cleanup.html
 
-AbstractTransferHandle::AbstractTransferHandle(const std::string &url, bool verbose)
+AbstractTransferHandle::AbstractTransferHandle(const Url &url, bool verbose)
 	: m_url{url}
 {
 	m_handle = curl_easy_init();
@@ -12,7 +12,7 @@ AbstractTransferHandle::AbstractTransferHandle(const std::string &url, bool verb
 		spdlog::error("curl_easy_init()");
 		return;
 	}
-	curl_easy_setopt(m_handle, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(m_handle, CURLOPT_URL, url.url().c_str());
 	curl_easy_setopt(m_handle, CURLOPT_VERBOSE, verbose ? 1L : 0L);
 	curl_easy_setopt(m_handle, CURLOPT_PRIVATE, this); // complementing method making use of this is -> fromCurlEasyHandle()
 
@@ -42,7 +42,7 @@ CURL *AbstractTransferHandle::handle() const
 	return m_handle;
 }
 
-const std::string &AbstractTransferHandle::url() const
+const Url &AbstractTransferHandle::url() const
 {
 	return m_url;
 }

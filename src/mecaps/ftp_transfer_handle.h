@@ -10,7 +10,7 @@ using namespace KDBindings;
 class AbstractFtpTransferHandle : public AbstractTransferHandle
 {
   public:
-	explicit AbstractFtpTransferHandle(const std::string &url, bool verbose = false);
+	explicit AbstractFtpTransferHandle(const Url &url, bool verbose = false);
 
 	Property<curl_off_t> numberOfBytesTransferred { 0 };
 	Property<curl_off_t> totalNumberOfBytesToTransfer { 0 };
@@ -30,7 +30,7 @@ class AbstractFtpTransferHandle : public AbstractTransferHandle
 class FtpDownloadTransferHandle : public AbstractFtpTransferHandle
 {
   public:
-	FtpDownloadTransferHandle(File &file, const std::string &url, bool verbose = false);
+	FtpDownloadTransferHandle(File &file, const Url &url, bool verbose = false);
 
   protected:
 	virtual int progressCallbackImpl(curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) override;
@@ -41,7 +41,7 @@ class FtpDownloadTransferHandle : public AbstractFtpTransferHandle
 class FtpUploadTransferHandle : public AbstractFtpTransferHandle
 {
   public:
-	FtpUploadTransferHandle(File &file, const std::string &url, bool verbose = false);
+	FtpUploadTransferHandle(File &file, const Url &url, bool verbose = false);
 
   protected:
 	virtual int progressCallbackImpl(curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) override;

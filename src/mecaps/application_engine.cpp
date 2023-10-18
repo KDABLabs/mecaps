@@ -41,14 +41,14 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
 	uiPageHttp.set_url("https://example.com");
 
 	auto onHttpTransferFinished = [&](int result) {
-		spdlog::info("HttpTransferHandle::finished() signal triggered for URL {}", httpTransfer->url());
+		spdlog::info("HttpTransferHandle::finished() signal triggered for URL {}", httpTransfer->url().url());
 		const auto fetchedContent = (result == CURLcode::CURLE_OK) ? httpTransfer->dataRead() : std::string();
 		uiPageHttp.set_fetched_content(slint::SharedString(fetchedContent));
 		delete httpTransfer;
 	};
 
 	auto startHttpQuery = [&]() {
-		const std::string &url = uiPageHttp.get_url().data();
+		const auto &url = Url(uiPageHttp.get_url().data());
 		httpTransfer = new HttpTransferHandle(url, true);
 		httpTransfer->finished.connect(onHttpTransferFinished);
 		NetworkAccessManager::instance().registerTransfer(httpTransfer);
@@ -77,7 +77,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 	};
 
 	auto startFtpDownload = [&]() {
-		const std::string &url = uiPageFtp.get_url_download().data();
+		const auto &url = Url(uiPageFtp.get_url_download().data());
 		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
 		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
 		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);
@@ -97,7 +97,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 	};
 
 	auto startFtpUpload = [&]() {
-		const std::string &url = uiPageFtp.get_url_upload().data();
+		const auto &url = Url(uiPageFtp.get_url_upload().data());
 		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
 		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
 		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
@@ -191,11 +191,11 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		const std::string username = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_username().data() : std::string();
 		const std::string password = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_password().data() : std::string();
 
-		const std::string url = uiPageMqtt.get_url().data();
+		const auto &url = Url(uiPageMqtt.get_url().data());
 		const auto port = uiPageMqtt.get_port();
 
 		mqttClient.setUsernameAndPassword(username, password);
-		mqttClient.connect(url, port, 10);
+		mqttClient.connect(url.url(), port, 10);
 	};
 	uiPageMqtt.on_request_mqtt_connect( [&] { connectToMqttBroker(); });
 
