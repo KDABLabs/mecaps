@@ -2,9 +2,11 @@
 
 #include <KDFoundation/file_descriptor_notifier.h>
 #include "KDFoundation/timer.h"
+#include <KDUtils/file.h>
 #include <mosquittopp.h>
 
 using namespace KDFoundation;
+using namespace KDUtils;
 
 class MQTT : private mosqpp::mosquittopp
 {
@@ -39,6 +41,7 @@ class MQTT : private mosqpp::mosquittopp
 
 	KDBindings::Signal<> error;
 
+	int setTls(const File &cafile);
 	int setUsernameAndPassword(const std::string &username, const std::string &password);
 	int setWill(const std::string &topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false);
 

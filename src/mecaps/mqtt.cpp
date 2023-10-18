@@ -41,12 +41,35 @@ MQTT::MQTT(const std::string &clientId, bool cleanSession, bool verbose)
 		int major, minor, revision = 0;
 		mosqpp::lib_version(&major, &minor, &revision);
 		spdlog::info("MQTT::MQTT() - using libmosquitto v{}.{}.{}", major, minor, revision);
+
+//		TODO -> add as soon as get_ssl() is added to mosquittopp API
+//		const auto sslStruct = mosquittopp::get_ssl();
+//		spdlog::info("MQTT::MQTT() - TLS connections are {}", sslStruct ? "enabled" : "not enabled");
 	}
 }
 
 MQTT::~MQTT()
 {
 
+}
+
+int MQTT::setTls(const File &cafile)
+{
+	spdlog::debug("MQTT::setTls() - cafile: {}", cafile.path());
+
+	if (connectionState.get() != ConnectionState::DISCONNECTED) {
+		spdlog::error("MQTT::setTls() - Setting TLS is only allowed when disconnected.");
+		return MOSQ_ERR_UNKNOWN;
+	}
+
+	if (!cafile.exists()) {
+		spdlog::error("MQTT::setTls() - cafile does not exist.");
+		return MOSQ_ERR_UNKNOWN;
+	}
+
+	const auto result = mosquittopp::tls_set(cafile.path().c_str());
+	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::setTls()");
+	return result;
 }
 
 int MQTT::setUsernameAndPassword(const std::string &username, const std::string &password)
@@ -92,7 +115,17 @@ int MQTT::connect(const std::string &host, int port, int keepalive)
 	}
 
 	connectionState.set(ConnectionState::CONNECTING);
-	const auto result = mosquittopp::connect_async(host.c_str(), port, keepalive);
+	// TODO -> TLS only works with connect(), it does not work with connect_async()
+	// I'm uncertain if there is a setup that allows for connect_async() with TLS (I didn't manage to find one)
+	// (the use of non-blocking connect_async() would be preferred from our POV)
+	// other people seem to have encountered similiar behaviour before, though this issue should have been fixed a while ago
+	// -> https://github.com/eclipse/mosquitto/issues/990
+	const auto start = clock();
+	const auto result = mosquittopp::connect(host.c_str(), port, keepalive);
+	const auto end = clock();
+	const auto elapsedTimeMs = std::round((double(end-start) / double(CLOCKS_PER_SEC)) * 1000000.0);
+	spdlog::info("MQTT::connect() - blocking call of mosquittopp::connect() took {} µs", elapsedTimeMs);
+
 	const auto hasError = checkMosquitoppResultAndDoDebugPrints(result, "MQTT::connect()");
 	if (!hasError) {
 		hookToEventLoop();

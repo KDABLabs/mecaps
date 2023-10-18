@@ -5,6 +5,7 @@ export enum MqttConnectionState { connecting, connected, disconnecting, disconne
 export enum MqttSubscriptionState { subscribing, subscribed, unsubscribing, unsubscribed }
 
 export global MqttSingleton {
+    in-out property<string> ca-file-path;
     in-out property<string> username;
     in-out property<string> password;
     in-out property<string> url;
@@ -13,6 +14,7 @@ export global MqttSingleton {
     in-out property<string> last-will-topic;
     in-out property<string> last-will-payload;
     in-out property<int> port;
+    in-out property<bool> set-ca-file-path-on-connect;
     in-out property<bool> set-last-will-on-connect;
     in-out property<bool> set-username-and-password-on-connect;
     in property<MqttConnectionState> connection-state: MqttConnectionState.disconnected;
@@ -79,6 +81,17 @@ export component MqttPage inherits Page {
             Text {
                 text: @tr("Connect");
                 font-size: 16px;
+            }
+        }
+        Row {
+            LineEdit {
+                enabled: root.is-disconnected;
+                text <=> MqttSingleton.ca-file-path;
+                placeholder-text: @tr("no CA file path set");
+            }
+            Switch {
+                enabled: root.is-disconnected;
+                checked <=> MqttSingleton.set-ca-file-path-on-connect;
             }
         }
         Row {

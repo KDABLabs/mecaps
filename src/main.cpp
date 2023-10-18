@@ -4,7 +4,7 @@
 int main()
 {
 	const slint::PhysicalSize windowSize(
-		slint::Size<uint32_t>{.width = 800, .height = 600});
+		slint::Size<uint32_t>{.width = 800, .height = 800});
 
 	// step 1: register GuiApplication singleton
 	KDGui::GuiApplication app;

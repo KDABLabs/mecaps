@@ -117,6 +117,9 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
 	uiPageMqtt.set_subscribed_topics(mqttSubscriptionsModel);
 
+	static auto caFilePath = std::filesystem::current_path().append("mosquitto.org.crt").string();
+	uiPageMqtt.set_ca_file_path(slint::SharedString(caFilePath));
+
 	uiPageMqtt.set_last_will_topic("farewell");
 	uiPageMqtt.set_last_will_payload("boot(m_incarnations[++i]);");
 	uiPageMqtt.set_username("ro");
@@ -193,6 +196,9 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		const std::string lastWillTopic = uiPageMqtt.get_last_will_topic().data();
 		const std::string lastWillPayload = uiPageMqtt.get_last_will_payload().data();
 
+		const auto setTls = uiPageMqtt.get_set_ca_file_path_on_connect();
+		const std::string tlsCaFilePath = uiPageMqtt.get_ca_file_path().data();
+
 		const auto setUsernameAndPasswordOnConnect = uiPageMqtt.get_set_username_and_password_on_connect();
 		const std::string username = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_username().data() : std::string();
 		const std::string password = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_password().data() : std::string();
@@ -202,6 +208,8 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 
 		if (setLastWill)
 			mqttClient.setWill(lastWillTopic, lastWillPayload.size(), &lastWillPayload);
+		if (setTls)
+			mqttClient.setTls(tlsCaFilePath);
 		mqttClient.setUsernameAndPassword(username, password);
 		mqttClient.connect(url.url(), port, 10);
 	};
