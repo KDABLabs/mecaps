@@ -7,10 +7,15 @@ if(NOT KDUtils_FOUND)
         KDUtils
         GIT_REPOSITORY https://github.com/kdab/kdutils
         GIT_TAG 8d383cff0f2925ffdb39d60b9ccd2a61139915ac # v0.1.2
-        USES_TERMINAL_DOWNLOAD YES USES_TERMINAL_UPDATE YES
+        USES_TERMINAL_DOWNLOAD YES
+        USES_TERMINAL_UPDATE YES
     )
 
     option(KDUTILS_BUILD_TESTS "Build the tests" OFF)
+
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        add_compile_definitions(KD_PLATFORM_WAYLAND)
+    endif()
 
     FetchContent_MakeAvailable(KDUtils)
 endif()
