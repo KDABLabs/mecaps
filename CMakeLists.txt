@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
-project(mecaps_demo LANGUAGES CXX)
+
+project(
+    mecaps_demo
+    DESCRIPTION "MECAPS - a starter pack for Qt-free C++ (embedded) applications"
+    LANGUAGES CXX
+)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
