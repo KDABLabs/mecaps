@@ -7,6 +7,11 @@ import { MqttPage, MqttSingleton } from "pages/mqtt_page.slint";
 
 export { CounterSingleton, FtpSingleton, HttpSingleton, MqttSingleton }
 
+export global AppSingleton {
+    in property<bool> curl-available: true;
+    in property<bool> mosquitto-available: true;
+}
+
 export component AppWindow inherits Window {
 
     preferred-width: 700px;
@@ -17,9 +22,15 @@ export component AppWindow inherits Window {
         title: @tr("mecaps demo");
         width: 200px;
         x: 0;
-        model: MqttSingleton.mosquitto-available ?
-              [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP"), @tr("Menu" => "MQTT")]
-            : [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP")];
+        model: AppSingleton.curl-available ?
+            ( AppSingleton.mosquitto-available ?
+                [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP"), @tr("Menu" => "MQTT")] :
+                [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP")]
+            ) :
+            ( AppSingleton.mosquitto-available ?
+                [@tr("Menu" => "Counter"), @tr("Menu" => "MQTT")] :
+                [@tr("Menu" => "Counter")]
+            );
     }
 
     counter-page := CounterPage {
@@ -29,19 +40,19 @@ export component AppWindow inherits Window {
     }
 
     http-page := HttpPage {
-        visible: (sideBar.current-item == 1);
+        visible: AppSingleton.curl-available && (sideBar.current-item == 1);
         width: root.width - sideBar.width;
         x: sideBar.x+sideBar.width;
     }
 
     ftp-page := FtpPage {
-        visible: (sideBar.current-item == 2);
+        visible: AppSingleton.curl-available && (sideBar.current-item == 2);
         width: root.width - sideBar.width;
         x: sideBar.x+sideBar.width;
     }
 
     mqtt-page := MqttPage {
-        visible: (sideBar.current-item == 3);
+        visible: AppSingleton.curl-available ? (sideBar.current-item == 3) : (sideBar.current-item == 1);
         width: root.width - sideBar.width;
         x: sideBar.x+sideBar.width;
     }

@@ -5,7 +5,6 @@ export enum MqttConnectionState { connecting, connected, disconnecting, disconne
 export enum MqttSubscriptionState { subscribing, subscribed, unsubscribing, unsubscribed }
 
 export global MqttSingleton {
-    in property<bool> mosquitto-available: true;
     in-out property<string> ca-file-path;
     in-out property<string> username;
     in-out property<string> password;

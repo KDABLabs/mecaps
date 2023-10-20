@@ -1,8 +1,9 @@
 #pragma once
 
 #include <KDFoundation/file_descriptor_notifier.h>
-#include "KDFoundation/timer.h"
+#include <KDFoundation/timer.h>
 #include <KDUtils/file.h>
+#include <KDUtils/url.h>
 #include <mosquittopp.h>
 
 using namespace KDFoundation;
@@ -45,7 +46,7 @@ class MQTT : private mosqpp::mosquittopp
 	int setUsernameAndPassword(const std::string &username, const std::string &password);
 	int setWill(const std::string &topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false);
 
-	int connect(const std::string &host, int port = 1883, int keepalive = 60);
+	int connect(const Url &host, int port = 1883, int keepalive = 60);
 	int disconnect();
 
 	int publish(int *msgId, const char *topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false);

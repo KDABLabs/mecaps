@@ -1,10 +1,12 @@
 #include "application_engine.h"
+#ifdef CURL_AVAILABLE
 #include "ftp_transfer_handle.h"
 #include "http_transfer_handle.h"
-#if MOSQUITTO_AVAILABLE
+#include "network_access_manager.h"
+#endif
+#ifdef MOSQUITTO_AVAILABLE
 #include "mqtt.h"
 #endif
-#include "network_access_manager.h"
 #include <spdlog/spdlog.h>
 
 ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindow> &appWindow)
@@ -15,6 +17,17 @@ ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindo
 
 ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &appWindow)
 {
+#ifdef SPDLOG_ACTIVE_LEVEL
+	spdlog::set_level(spdlog::level::level_enum(SPDLOG_ACTIVE_LEVEL));
+#endif
+	const auto &appSingleton = appWindow->global<AppSingleton>();
+#ifndef CURL_AVAILABLE
+	appSingleton.set_curl_available(false);
+#endif
+#ifndef MOSQUITTO_AVAILABLE
+	appSingleton.set_mosquitto_available(false);
+#endif
+
 	InitCounterDemo(appWindow->global<CounterSingleton>());
 	InitHttpDemo(appWindow->global<HttpSingleton>());
 	InitFtpDemo(appWindow->global<FtpSingleton>());
@@ -37,6 +50,7 @@ void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
 
 void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
 {
+#ifdef CURL_AVAILABLE
 	static auto &uiPageHttp = httpSingleton;
 	static HttpTransferHandle *httpTransfer = nullptr;
 
@@ -56,10 +70,12 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
 		NetworkAccessManager::instance().registerTransfer(httpTransfer);
 	};
 	uiPageHttp.on_request_http_query(startHttpQuery);
+#endif
 }
 
 void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 {
+#ifdef CURL_AVAILABLE
 	static auto &uiPageFtp = ftpSingleton;
 	static FtpDownloadTransferHandle *ftpDownloadTransfer = nullptr;
 	static FtpUploadTransferHandle *ftpUploadTransfer = nullptr;
@@ -107,6 +123,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 		uiPageFtp.set_is_uploading(true);
 	};
 	uiPageFtp.on_request_ftp_upload( [&] { startFtpUpload(); } );
+#endif
 }
 
 void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
@@ -214,7 +231,7 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		if (setTls)
 			mqttClient.setTls(tlsCaFilePath);
 		mqttClient.setUsernameAndPassword(username, password);
-		mqttClient.connect(url.url(), port, 10);
+		mqttClient.connect(url, port, 10);
 	};
 	uiPageMqtt.on_request_mqtt_connect( [&] { connectToMqttBroker(); });
 
@@ -240,8 +257,6 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		mqttClient.publish(NULL, topic, payload.length(), payload.c_str());
 	};
 	uiPageMqtt.on_request_mqtt_publish( [&] { publishMqttMessage(); } );
-#else
-	mqttSingleton.set_mosquitto_available(false);
 #endif
 }
 

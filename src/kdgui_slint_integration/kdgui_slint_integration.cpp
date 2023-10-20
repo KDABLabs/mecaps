@@ -1,4 +1,4 @@
-#include "mecaps.h"
+#include "kdgui_slint_integration.h"
 #include "platform.h"
 
 namespace mecaps {

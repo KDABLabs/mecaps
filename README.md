@@ -58,9 +58,9 @@ sudo apt install build-essential cmake git libxkbcommon-dev libxcb-xkb-dev libxk
 4. Run the application binary
     * Linux/macOS:
         ```
-        ./build/my_application
+        ./build/demo/mecaps_demo_ui
         ```
     * Windows:
         ```
-        build\my_application.exe
+        build\demo\mecaps_demo_ui.exe
         ```

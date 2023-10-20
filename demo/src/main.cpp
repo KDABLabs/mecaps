@@ -1,5 +1,5 @@
-#include "mecaps/application_engine.h"
-#include "mecaps/mecaps.h"
+#include "application_engine/application_engine.h"
+#include "kdgui_slint_integration.h"
 
 int main()
 {

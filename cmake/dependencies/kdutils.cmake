@@ -13,10 +13,6 @@ if(NOT KDUtils_FOUND)
 
     option(KDUTILS_BUILD_TESTS "Build the tests" OFF)
 
-    if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-        add_compile_definitions(KD_PLATFORM_WAYLAND)
-    endif()
-
     FetchContent_MakeAvailable(KDUtils)
 endif()
 

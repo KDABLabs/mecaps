@@ -100,9 +100,9 @@ int MQTT::setWill(const std::string &topic, int payloadlen, const void *payload,
 	return result;
 }
 
-int MQTT::connect(const std::string &host, int port, int keepalive)
+int MQTT::connect(const Url &host, int port, int keepalive)
 {
-	spdlog::debug("MQTT::connect() - host:{}, port:{}, keepalive:{})", host, port, keepalive);
+	spdlog::debug("MQTT::connect() - host:{}, port:{}, keepalive:{})", host.url(), port, keepalive);
 
 	if (connectionState.get() == ConnectionState::CONNECTING) {
 		spdlog::error("MQTT::connect() - Already connecting to host.");
@@ -121,7 +121,7 @@ int MQTT::connect(const std::string &host, int port, int keepalive)
 	// other people seem to have encountered similiar behaviour before, though this issue should have been fixed a while ago
 	// -> https://github.com/eclipse/mosquitto/issues/990
 	const auto start = clock();
-	const auto result = mosquittopp::connect(host.c_str(), port, keepalive);
+	const auto result = mosquittopp::connect(host.url().c_str(), port, keepalive);
 	const auto end = clock();
 	const auto elapsedTimeMs = std::round((double(end-start) / double(CLOCKS_PER_SEC)) * 1000000.0);
 	spdlog::info("MQTT::connect() - blocking call of mosquittopp::connect() took {} µs", elapsedTimeMs);
