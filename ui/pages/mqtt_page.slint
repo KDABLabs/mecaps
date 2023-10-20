@@ -5,6 +5,7 @@ export enum MqttConnectionState { connecting, connected, disconnecting, disconne
 export enum MqttSubscriptionState { subscribing, subscribed, unsubscribing, unsubscribed }
 
 export global MqttSingleton {
+    in property<bool> mosquitto-available: true;
     in-out property<string> ca-file-path;
     in-out property<string> username;
     in-out property<string> password;
@@ -19,7 +20,11 @@ export global MqttSingleton {
     in-out property<bool> set-username-and-password-on-connect;
     in property<MqttConnectionState> connection-state: MqttConnectionState.disconnected;
     in property<MqttSubscriptionState> subscription-state: MqttSubscriptionState.unsubscribed;
-    in property<[string]> subscribed-topics;
+
+    //TODO: Remove this empty initialization once https://github.com/slint-ui/slint/issues/3704 is
+    //fixed and released
+    in property<[string]> subscribed-topics: [];
+
     in property<string> message: @tr("no message received yet");
     in property<bool> is-topic-valid: false;
     callback request-mqtt-connect();

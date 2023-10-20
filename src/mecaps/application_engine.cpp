@@ -1,7 +1,9 @@
 #include "application_engine.h"
 #include "ftp_transfer_handle.h"
 #include "http_transfer_handle.h"
+#if MOSQUITTO_AVAILABLE
 #include "mqtt.h"
+#endif
 #include "network_access_manager.h"
 #include <spdlog/spdlog.h>
 
@@ -109,6 +111,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 
 void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 {
+#ifdef MOSQUITTO_AVAILABLE
 	MQTT::libInit();
 
 	static auto &uiPageMqtt = mqttSingleton;
@@ -237,9 +240,14 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		mqttClient.publish(NULL, topic, payload.length(), payload.c_str());
 	};
 	uiPageMqtt.on_request_mqtt_publish( [&] { publishMqttMessage(); } );
+#else
+	mqttSingleton.set_mosquitto_available(false);
+#endif
 }
 
 void ApplicationEngine::DeinitMqttDemo()
 {
+#ifdef MOSQUITTO_AVAILABLE
 	MQTT::libCleanup();
+#endif
 }

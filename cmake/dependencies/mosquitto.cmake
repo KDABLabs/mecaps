@@ -1,7 +1,9 @@
 include(ExternalProject)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquittopp REQUIRED)
+find_package(PkgConfig)
+if(UNIX AND PKG_CONFIG_FOUND)
+    pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquittopp REQUIRED)
+endif()
 
 file (DOWNLOAD https://test.mosquitto.org/ssl/mosquitto.org.crt mosquitto.org.crt)
 

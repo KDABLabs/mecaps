@@ -3,8 +3,10 @@
 
 int main()
 {
+	// WARNING: do not change to something else than 800x600 until
+	// https://quality.kdab.com/browse/RND-448 is done
 	const slint::PhysicalSize windowSize(
-		slint::Size<uint32_t>{.width = 800, .height = 800});
+		slint::Size<uint32_t>{.width = 800, .height = 600});
 
 	// step 1: register GuiApplication singleton
 	KDGui::GuiApplication app;

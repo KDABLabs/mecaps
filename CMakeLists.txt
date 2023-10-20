@@ -18,7 +18,6 @@ set(SOURCES
     src/mecaps/ftp_transfer_handle.cpp
     src/mecaps/http_transfer_handle.cpp
     src/mecaps/mecaps.cpp
-    src/mecaps/mqtt.cpp
     src/mecaps/network_access_manager.cpp
     src/mecaps/slint_wrapper_window.cpp
     src/mecaps/window_adapter.cpp
@@ -35,7 +34,6 @@ set(LIBRARIES
     KDUtils::KDFoundation
     KDUtils::KDGui
     CURL::libcurl
-    PkgConfig::Mosquitto
 )
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/ECM/find-modules")
@@ -50,7 +48,16 @@ endif()
 # get dependencies
 include(cmake/dependencies.cmake)
 
+if(Mosquitto_FOUND)
+    list(APPEND LIBRARIES PkgConfig::Mosquitto)
+    list(APPEND SOURCES src/mecaps/mqtt.cpp)
+endif()
+
 add_executable(${TARGET_NAME} ${SOURCES})
+
+if(Mosquitto_FOUND)
+    target_compile_definitions(${TARGET_NAME} PRIVATE MOSQUITTO_AVAILABLE)
+endif()
 
 slint_target_sources(${TARGET_NAME} ${SLINT_SOURCES})
 target_link_libraries(${TARGET_NAME} PRIVATE ${LIBRARIES})

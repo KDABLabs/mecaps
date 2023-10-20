@@ -17,7 +17,9 @@ export component AppWindow inherits Window {
         title: @tr("mecaps demo");
         width: 200px;
         x: 0;
-        model: [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP"), @tr("Menu" => "MQTT")];
+        model: MqttSingleton.mosquitto-available ?
+              [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP"), @tr("Menu" => "MQTT")]
+            : [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP")];
     }
 
     counter-page := CounterPage {
