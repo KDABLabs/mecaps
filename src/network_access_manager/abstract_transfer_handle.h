@@ -9,6 +9,7 @@ using namespace KDUtils;
 
 class AbstractTransferHandle
 {
+	friend class AbstractTransferHandleUnitTestHarness;
 	friend class NetworkAccessManager;
 
   public:
@@ -26,7 +27,7 @@ class AbstractTransferHandle
   protected:
 	virtual size_t readCallbackImpl(char *data, size_t size, size_t nmemb);
 	virtual size_t writeCallbackImpl(char *data, size_t size, size_t nmemb);
-	virtual void transferDoneCallbackImpl(CURLcode result) {}
+	virtual void transferDoneCallbackImpl(CURLcode result) = 0;
 
 	CURL *m_handle;
 	Url m_url;

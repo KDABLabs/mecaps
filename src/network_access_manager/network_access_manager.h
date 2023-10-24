@@ -7,10 +7,13 @@
 
 using namespace KDFoundation;
 
+class NetworkAccessManagerUnitTestHarness;
 using FileDescriptorNotifierMap = std::unordered_map<int,std::unique_ptr<FileDescriptorNotifier>>;
 
 class NetworkAccessManager
 {
+	friend class NetworkAccessManagerUnitTestHarness;
+
   public:
 	static NetworkAccessManager &instance();
 

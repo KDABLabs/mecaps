@@ -13,6 +13,7 @@ option(BUILD_DEMO_UI "Build Demo UI" ON)
 option(BUILD_INTEGRATION_CURL "Build Curl Integration" ON)
 option(BUILD_INTEGRATION_KDGUI_SLINT "Build KDGui/Slint Integration" ON)
 option(BUILD_INTEGRATION_MQTT "Build MQTT Integration" ON) # this will be overriden in dependencies.cmake for now
+option(BUILD_TESTS "Build Tests" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/ECM/find-modules")
 include(cmake/dependencies.cmake)
@@ -38,4 +39,8 @@ endif()
 
 if (BUILD_DEMO_UI AND BUILD_INTEGRATION_KDGUI_SLINT)
     add_subdirectory(demo)
+endif()
+
+if(BUILD_TESTS)
+    enable_testing()
 endif()

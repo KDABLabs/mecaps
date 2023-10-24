@@ -9,6 +9,8 @@ using namespace KDBindings;
 
 class AbstractFtpTransferHandle : public AbstractTransferHandle
 {
+	friend class AbstractFtpTransferHandleUnitTestHarness;
+
   public:
 	explicit AbstractFtpTransferHandle(const Url &url, bool verbose = false);
 
