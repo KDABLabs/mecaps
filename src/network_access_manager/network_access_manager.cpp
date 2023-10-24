@@ -23,18 +23,18 @@ NetworkAccessManager &NetworkAccessManager::instance()
 	return s_instance;
 }
 
-void NetworkAccessManager::registerTransfer(AbstractTransferHandle *transferHandle)
+bool NetworkAccessManager::registerTransfer(AbstractTransferHandle &transferHandle)
 {
 	spdlog::debug("NetworkAccessManager::registerTransfer()");
-	auto rc = curl_multi_add_handle(m_handle, transferHandle->handle());
-	checkCurlMultiResultAndDoDebugPrints(rc);
+	auto rc = curl_multi_add_handle(m_handle, transferHandle.handle());
+	return checkCurlMultiResultAndDoDebugPrints(rc);
 }
 
-void NetworkAccessManager::unregisterTransfer(AbstractTransferHandle *transferHandle)
+bool NetworkAccessManager::unregisterTransfer(AbstractTransferHandle &transferHandle)
 {
 	spdlog::debug("NetworkAccessManager::unregisterTransfer()");
-	auto rc = curl_multi_remove_handle(m_handle, transferHandle->handle());
-	checkCurlMultiResultAndDoDebugPrints(rc);
+	auto rc = curl_multi_remove_handle(m_handle, transferHandle.handle());
+	return checkCurlMultiResultAndDoDebugPrints(rc);
 }
 
 NetworkAccessManager::NetworkAccessManager()
@@ -140,8 +140,13 @@ void NetworkAccessManager::processTransferMessages()
 	while ((msg = curl_multi_info_read(m_handle, &numberOfMessagesLeft))) {
 		if (msg->msg == CURLMSG_DONE) {
 			auto transferHandle = AbstractTransferHandle::fromCurlEasyHandle(msg->easy_handle);
-			unregisterTransfer(transferHandle);
 
+			if (!transferHandle) {
+				spdlog::error("NetworkAccessManager::processTransferMessages() - no AbstractTransferHandle associated with CURL {}", msg->easy_handle);
+				continue;
+			}
+
+			unregisterTransfer(*transferHandle);
 			transferHandle->transferDoneCallback(msg->data.result);
 		}
 	}

@@ -67,7 +67,7 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
 		const auto &url = Url(uiPageHttp.get_url().data());
 		httpTransfer = new HttpTransferHandle(url, true);
 		httpTransfer->finished.connect(onHttpTransferFinished);
-		NetworkAccessManager::instance().registerTransfer(httpTransfer);
+		NetworkAccessManager::instance().registerTransfer(*httpTransfer);
 	};
 	uiPageHttp.on_request_http_query(startHttpQuery);
 #endif
@@ -99,7 +99,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
 		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
 		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);
-		NetworkAccessManager::instance().registerTransfer(ftpDownloadTransfer);
+		NetworkAccessManager::instance().registerTransfer(*ftpDownloadTransfer);
 		uiPageFtp.set_is_downloading(true);
 	};
 	uiPageFtp.on_request_ftp_download( [&] { startFtpDownload(); } );
@@ -119,7 +119,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
 		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
 		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
-		NetworkAccessManager::instance().registerTransfer(ftpUploadTransfer);
+		NetworkAccessManager::instance().registerTransfer(*ftpUploadTransfer);
 		uiPageFtp.set_is_uploading(true);
 	};
 	uiPageFtp.on_request_ftp_upload( [&] { startFtpUpload(); } );

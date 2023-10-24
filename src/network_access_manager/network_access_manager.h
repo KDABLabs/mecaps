@@ -14,8 +14,8 @@ class NetworkAccessManager
   public:
 	static NetworkAccessManager &instance();
 
-	void registerTransfer(AbstractTransferHandle *transferHandle);
-	void unregisterTransfer(AbstractTransferHandle *transferHandle);
+	bool registerTransfer(AbstractTransferHandle &transferHandle);
+	bool unregisterTransfer(AbstractTransferHandle &transferHandle);
 
   private:
 	NetworkAccessManager();
