@@ -29,6 +29,8 @@ static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButton button)
 	}
 }
 
+std::vector<std::optional<std::array<char, SlintWrapperWindow::s_maxUnicodeCharacterForKey>>> SlintWrapperWindow::s_unicodeForKey(SlintWrapperWindow::s_kdguiKeyMax, std::nullopt);
+
 SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 	: m_adapter(adapter)
 {
@@ -37,10 +39,6 @@ SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 			"Slint window scale does not match OS window scale. Updating...");
 		m_adapter->window().dispatch_scale_factor_change_event(newScale);
 	});
-	m_unicodeForKey.reserve(kdguiKeyMax);
-	for (int i = 0; i < kdguiKeyMax; ++i) {
-		m_unicodeForKey.emplace_back(std::nullopt);
-	}
 }
 
 void SlintWrapperWindow::event(EventReceiver *target,
@@ -67,91 +65,33 @@ void SlintWrapperWindow::event(EventReceiver *target,
 
 void SlintWrapperWindow::textInputEvent(KDGui::TextInputEvent *event)
 {
-	// this happens with backspace, which is a special key which also sends a
-	// textInputEvent
-	if (!m_lastPressed) {
-		SPDLOG_INFO("TextInputEvent recieved, but physical key is unknown or a "
-					"special key.");
-		return;
-	}
+	const auto text = event->text();
+	auto result = handleTextInputEvent(text, m_lastPressed);
 
-	assert(!isSpecial(m_lastPressed.value()));
-
-	if (unknownKey(m_lastPressed.value())) {
-		SPDLOG_WARN("Unknown key");
-		return;
-	}
-
-	auto &optional = m_unicodeForKey[m_lastPressed.value()];
-
-	// optional will only be null once. every time a key is pressed it will be
-	// written to.
-	if (!optional)
-		optional.emplace();
-
-	auto &textBuffer = optional.value();
-	// NOTE: this check relies on the event's text and the text buffer
-	// containing the same size chars
-	if (event->text().size() > textBuffer.size()) {
-		SPDLOG_WARN(
-			"Unicode key representation longer than expected, aborting.");
-		return;
-	}
-
-	std::memcpy(textBuffer.data(), event->text().data(), event->text().size());
-
-	m_adapter->window().dispatch_key_press_event(
-		slint::SharedString(optional.value().data()));
+	if (result)
+		m_adapter->window().dispatch_key_press_event(result.value());
 
 	event->setAccepted(true);
 }
 
 void SlintWrapperWindow::keyReleaseEvent(KDGui::KeyReleaseEvent *event)
 {
-	auto key = event->key();
+	const auto key = event->key();
+	auto result = handleKeyReleaseEvent(key);
 
-	if (unknownKey(key)) {
-		SPDLOG_WARN("Unknown key");
-		return;
-	}
-
-	if (isSpecial(key)) {
-		m_adapter->window().dispatch_key_release_event(specialKeyText(key));
-	} else {
-		auto &optionalUnicode = m_unicodeForKey[event->key()];
-
-		if (!optionalUnicode) {
-			SPDLOG_WARN(
-				"Key released, but we don't know its unicode representation.");
-			return;
-		}
-
-		auto &unicode = optionalUnicode.value();
-
-		m_adapter->window().dispatch_key_release_event(
-			slint::SharedString(unicode.data()));
-	}
+	if (result)
+		m_adapter->window().dispatch_key_release_event(result.value());
 
 	event->setAccepted(true);
 }
 
 void SlintWrapperWindow::keyPressEvent(KDGui::KeyPressEvent *event)
 {
-	auto key = event->key();
-	if (unknownKey(key)) {
-		SPDLOG_WARN("Unknown key");
-		return;
-	}
+	const auto key = event->key();
+	auto result = handleKeyPressEvent(key, m_lastPressed);
 
-	if (isSpecial(key)) {
-		m_adapter->window().dispatch_key_press_event(specialKeyText(key));
-		// special keys may send text events. those will bail if no lastPressed
-		m_lastPressed = std::nullopt;
-	} else {
-		// capture this key and actually send the press event when we get its
-		// input text
-		m_lastPressed = key;
-	}
+	if (result)
+		m_adapter->window().dispatch_key_press_event(result.value());
 
 	event->setAccepted(true);
 }
@@ -246,4 +186,89 @@ void SlintWrapperWindow::mouseWheelEvent(KDGui::MouseWheelEvent *event)
 
 	event->setAccepted(true);
 }
+
+std::optional<slint::SharedString> SlintWrapperWindow::handleKeyPressEvent(KDGui::Key key, std::optional<KDGui::Key> &lastKeyPressed)
+{
+	std::optional<slint::SharedString> result = {};
+
+	if (isUnknownKey(key)) {
+		SPDLOG_WARN("Unknown key");
+	}
+	else if (isSpecial(key)) {
+		// special keys may send text events. those will bail if no lastPressed
+		lastKeyPressed = std::nullopt;
+
+		result = specialKeyText(key);
+	}
+	else {
+		// capture this key and actually send the press event when we get its
+		// input text
+		lastKeyPressed = key;
+	}
+
+	return result;
+}
+
+std::optional<slint::SharedString> SlintWrapperWindow::handleKeyReleaseEvent(KDGui::Key key)
+{
+	std::optional<slint::SharedString> result = {};
+
+	if (isUnknownKey(key)) {
+		SPDLOG_WARN("Unknown key");
+	}
+	else if (isSpecial(key)) {
+		result = specialKeyText(key);
+	}
+	else {
+		auto &optionalUnicode = s_unicodeForKey[key];
+
+		if (!optionalUnicode) {
+			SPDLOG_WARN("Key released, but we don't know its unicode representation.");
+		}
+		else {
+			auto &unicode = optionalUnicode.value();
+
+			result = slint::SharedString(unicode.data());
+		}
+	}
+
+	return result;
+}
+
+std::optional<slint::SharedString> SlintWrapperWindow::handleTextInputEvent(std::string_view text, std::optional<KDGui::Key> &lastKeyPressed)
+{
+	std::optional<slint::SharedString> result = {};
+
+	if (!lastKeyPressed) {
+		// this happens with backspace, which is a special key which also sends a textInputEvent
+		SPDLOG_INFO("TextInputEvent recieved, but physical key is unknown or a special key.");
+	}
+	else if (isSpecial(lastKeyPressed.value())) {
+		SPDLOG_WARN("TextInputEvent recieved, but last key is special key.");
+	}
+	else if (isUnknownKey(lastKeyPressed.value())) {
+		SPDLOG_WARN("TextInputEvent recieved, but last key is unknow key.");
+	}
+	else {
+		auto &optionalUnicode = s_unicodeForKey[lastKeyPressed.value()];
+
+		// optional will only be null once. every time a key is pressed it will be written to.
+		if (!optionalUnicode)
+			optionalUnicode.emplace();
+
+		auto &textBuffer = optionalUnicode.value();
+		// NOTE: this check relies on the event's text and the text buffer
+		// containing the same size chars
+		if (text.size() > textBuffer.size()) {
+			SPDLOG_WARN("Unicode key representation longer than expected, aborting.");
+		}
+		else {
+			std::memcpy(textBuffer.data(), text.data(), text.size());
+			result = slint::SharedString(optionalUnicode.value().data());
+		}
+	}
+
+	return result;
+}
+
 } // namespace mecaps
