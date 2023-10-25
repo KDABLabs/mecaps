@@ -12,6 +12,8 @@ class KDWindowAdapter;
 
 class SlintWrapperWindow : public KDGui::Window
 {
+  friend class SlintWrapperWindowUnitTestHarness;
+
   public:
 	SlintWrapperWindow(KDWindowAdapter *adapter);
 
