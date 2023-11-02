@@ -103,8 +103,8 @@ static constexpr bool kdguiKeysMatchExpected()
 
 template <typename T> inline bool inRange(KDGui::Key key, T keyRange)
 {
-	return (key > keyRange[0].kdgui &&
-			key < keyRange[keyRange.size() - 1].kdgui);
+	return (key >= keyRange[0].kdgui &&
+			key <= keyRange[keyRange.size() - 1].kdgui);
 };
 
 /// Returns true if the key is represented by one of slint's platform::key_codes
