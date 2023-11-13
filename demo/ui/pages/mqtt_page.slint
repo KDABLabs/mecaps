@@ -19,10 +19,7 @@ export global MqttSingleton {
     in-out property<bool> set-username-and-password-on-connect;
     in property<MqttConnectionState> connection-state: MqttConnectionState.disconnected;
     in property<MqttSubscriptionState> subscription-state: MqttSubscriptionState.unsubscribed;
-
-    //TODO: Remove this empty initialization once https://github.com/slint-ui/slint/issues/3704 is
-    //fixed and released
-    in property<[string]> subscribed-topics: [];
+    in property<[string]> subscribed-topics;
 
     in property<string> message: @tr("no message received yet");
     in property<bool> is-topic-valid: false;
