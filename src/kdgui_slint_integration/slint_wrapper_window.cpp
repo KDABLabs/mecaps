@@ -128,7 +128,7 @@ void SlintWrapperWindow::mousePressEvent(KDGui::MousePressEvent *event)
 			.x = static_cast<float>(event->xPos()) * scale,
 			.y = static_cast<float>(event->yPos()) * scale,
 		}),
-		kdGuiToPointerEventButton(event->button()));
+		kdGuiToPointerEventButton(static_cast<KDGui::MouseButton>(event->buttons())));
 	event->setAccepted(true);
 }
 
@@ -145,7 +145,7 @@ void SlintWrapperWindow::mouseReleaseEvent(KDGui::MouseReleaseEvent *event)
 			.x = static_cast<float>(event->xPos()) * scale,
 			.y = static_cast<float>(event->yPos()) * scale,
 		}),
-		kdGuiToPointerEventButton(event->button()));
+		kdGuiToPointerEventButton(static_cast<KDGui::MouseButton>(event->buttons())));
 	event->setAccepted(true);
 }
 
