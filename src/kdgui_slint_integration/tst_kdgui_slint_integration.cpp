@@ -9,14 +9,14 @@ namespace mecaps {
 class SlintWrapperWindowUnitTestHarness
 {
   public:
-	static std::optional<slint::SharedString> handleKeyPressEvent(KDGui::Key key, std::optional<KDGui::Key> &lastKeyPressed) {
-		return mecaps::SlintWrapperWindow::handleKeyPressEvent(key, lastKeyPressed);
+	static std::optional<slint::SharedString> handleKeyPressEvent(KDGui::Key key, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKeyPressed) {
+		return mecaps::SlintWrapperWindow::handleKeyPressEvent(0, key, lastNativeKeyCodePressed, lastKeyPressed);
 	}
 	static std::optional<slint::SharedString> handleKeyReleaseEvent(KDGui::Key key) {
-		return mecaps::SlintWrapperWindow::handleKeyReleaseEvent(key);
+		return mecaps::SlintWrapperWindow::handleKeyReleaseEvent(0, key);
 	}
-	static std::optional<slint::SharedString> handleTextInputEvent(std::string_view text, std::optional<KDGui::Key> &lastKeyPressed) {
-		return mecaps::SlintWrapperWindow::handleTextInputEvent(text, lastKeyPressed);
+	static std::optional<slint::SharedString> handleTextInputEvent(std::string_view text, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKeyPressed) {
+		return mecaps::SlintWrapperWindow::handleTextInputEvent(text, lastNativeKeyCodePressed, lastKeyPressed);
 	}
 };
 
@@ -35,19 +35,20 @@ TEST_SUITE("KDGuiSlintIntegration")
 															   bool expectKeyPressEventToBeDispatchedOnKeyPressEvent,
 															   bool expectKeyPressEventToBeDispatchedOnTextInputEvent)
 	{
+		uint8_t lastNativeKeyCodePressed;
 		std::optional<KDGui::Key> lastKeyPressed;
 		std::optional<slint::SharedString> result;
 
 		bool keyPressEventWillBeDispatched;
 		bool keyReleaseEventWillBeDispatched;
 
-		result = mecaps::SlintWrapperWindowUnitTestHarness::handleKeyPressEvent(key, lastKeyPressed);
+		result = mecaps::SlintWrapperWindowUnitTestHarness::handleKeyPressEvent(key, lastNativeKeyCodePressed, lastKeyPressed);
 		keyPressEventWillBeDispatched = result.has_value();
 		REQUIRE(keyPressEventWillBeDispatched == expectKeyPressEventToBeDispatchedOnKeyPressEvent);
 		if (expectKeyPressEventToBeDispatchedOnKeyPressEvent)
 			REQUIRE(result.value() == text);
 
-		result = mecaps::SlintWrapperWindowUnitTestHarness::handleTextInputEvent(text.value(), lastKeyPressed);
+		result = mecaps::SlintWrapperWindowUnitTestHarness::handleTextInputEvent(text.value(), lastNativeKeyCodePressed, lastKeyPressed);
 		keyPressEventWillBeDispatched = result.has_value();
 		REQUIRE(keyPressEventWillBeDispatched == expectKeyPressEventToBeDispatchedOnTextInputEvent);
 		if (expectKeyPressEventToBeDispatchedOnTextInputEvent)

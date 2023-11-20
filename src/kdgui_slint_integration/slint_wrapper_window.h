@@ -30,13 +30,13 @@ class SlintWrapperWindow : public KDGui::Window
 	void keyReleaseEvent(KDGui::KeyReleaseEvent *) override final;
 	void textInputEvent(KDGui::TextInputEvent *);
 
-	static std::optional<slint::SharedString> handleKeyPressEvent(KDGui::Key key, std::optional<KDGui::Key> &lastKeyPressed);
-	static std::optional<slint::SharedString> handleKeyReleaseEvent(KDGui::Key key);
-	static std::optional<slint::SharedString> handleTextInputEvent(std::string_view text, std::optional<KDGui::Key> &lastKeyPressed);
+	static std::optional<slint::SharedString> handleKeyPressEvent(uint8_t nativeKeyCode, KDGui::Key key, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKdGuiKeyPressed);
+	static std::optional<slint::SharedString> handleKeyReleaseEvent(uint8_t nativeKeyCode, KDGui::Key key);
+	static std::optional<slint::SharedString> handleTextInputEvent(std::string_view text, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKdGuiKeyPressed);
 
 	static bool isUnknownKey(KDGui::Key key)
 	{
-		return key < 0 || key > s_unicodeForKey.size();
+		return (key == KDGui::Key_Unknown);
 	}
 
 	// NOTE: this stuff exists because KDGui only provides a TextInputEvent
@@ -47,13 +47,12 @@ class SlintWrapperWindow : public KDGui::Window
 	// bytes is 16. on X, KDGui internally uses a buffer of 16 bytes. For
 	// windows, its dynamically sized.
 	static constexpr size_t s_maxUnicodeCharacterForKey = 16;
-	// FIXME: could change with kdgui
-	static constexpr KDGui::Key s_kdguiKeyMax = KDGui::Key_Menu;
-	static std::vector<std::optional<std::array<char, s_maxUnicodeCharacterForKey>>> s_unicodeForKey;
+	static std::vector<std::optional<std::array<char, s_maxUnicodeCharacterForKey>>> s_unicodeForNativeKeyCode;
 
 	// used to connect keycodes to the unicode strings in the proceeding text
 	// events.
-	std::optional<KDGui::Key> m_lastPressed;
+	uint8_t m_lastNativeKeyCodePressed;
+	std::optional<KDGui::Key> m_lastKdGuiKeyPressed;
 
 	KDWindowAdapter *m_adapter;
 };

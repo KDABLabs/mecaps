@@ -29,7 +29,7 @@ static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButton button)
 	}
 }
 
-std::vector<std::optional<std::array<char, SlintWrapperWindow::s_maxUnicodeCharacterForKey>>> SlintWrapperWindow::s_unicodeForKey(SlintWrapperWindow::s_kdguiKeyMax, std::nullopt);
+std::vector<std::optional<std::array<char, SlintWrapperWindow::s_maxUnicodeCharacterForKey>>> SlintWrapperWindow::s_unicodeForNativeKeyCode(256, std::nullopt);
 
 SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 	: m_adapter(adapter)
@@ -66,7 +66,7 @@ void SlintWrapperWindow::event(EventReceiver *target,
 void SlintWrapperWindow::textInputEvent(KDGui::TextInputEvent *event)
 {
 	const auto text = event->text();
-	auto result = handleTextInputEvent(text, m_lastPressed);
+	auto result = handleTextInputEvent(text, m_lastNativeKeyCodePressed, m_lastKdGuiKeyPressed);
 
 	if (result)
 		m_adapter->window().dispatch_key_press_event(result.value());
@@ -76,8 +76,9 @@ void SlintWrapperWindow::textInputEvent(KDGui::TextInputEvent *event)
 
 void SlintWrapperWindow::keyReleaseEvent(KDGui::KeyReleaseEvent *event)
 {
+	const auto nativeKeyCode = event->nativeKeycode();
 	const auto key = event->key();
-	auto result = handleKeyReleaseEvent(key);
+	auto result = handleKeyReleaseEvent(nativeKeyCode, key);
 
 	if (result)
 		m_adapter->window().dispatch_key_release_event(result.value());
@@ -87,8 +88,9 @@ void SlintWrapperWindow::keyReleaseEvent(KDGui::KeyReleaseEvent *event)
 
 void SlintWrapperWindow::keyPressEvent(KDGui::KeyPressEvent *event)
 {
+	const auto nativeKeyCode = event->nativeKeycode();
 	const auto key = event->key();
-	auto result = handleKeyPressEvent(key, m_lastPressed);
+	auto result = handleKeyPressEvent(nativeKeyCode, key, m_lastNativeKeyCodePressed, m_lastKdGuiKeyPressed);
 
 	if (result)
 		m_adapter->window().dispatch_key_press_event(result.value());
@@ -187,47 +189,35 @@ void SlintWrapperWindow::mouseWheelEvent(KDGui::MouseWheelEvent *event)
 	event->setAccepted(true);
 }
 
-std::optional<slint::SharedString> SlintWrapperWindow::handleKeyPressEvent(KDGui::Key key, std::optional<KDGui::Key> &lastKeyPressed)
+std::optional<slint::SharedString> SlintWrapperWindow::handleKeyPressEvent(uint8_t nativeKeyCode, KDGui::Key key, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKdGuiKeyPressed)
 {
 	std::optional<slint::SharedString> result = {};
 
-	if (isUnknownKey(key)) {
-		SPDLOG_WARN("Unknown key");
-	}
-	else if (isSpecial(key)) {
-		// special keys may send text events. those will bail if no lastPressed
-		lastKeyPressed = std::nullopt;
+	lastNativeKeyCodePressed = nativeKeyCode;
+	lastKdGuiKeyPressed = key;
 
+	if (isSpecial(key)) {
 		result = specialKeyText(key);
-	}
-	else {
-		// capture this key and actually send the press event when we get its
-		// input text
-		lastKeyPressed = key;
 	}
 
 	return result;
 }
 
-std::optional<slint::SharedString> SlintWrapperWindow::handleKeyReleaseEvent(KDGui::Key key)
+std::optional<slint::SharedString> SlintWrapperWindow::handleKeyReleaseEvent(uint8_t nativeKeyCode, KDGui::Key key)
 {
 	std::optional<slint::SharedString> result = {};
 
-	if (isUnknownKey(key)) {
-		SPDLOG_WARN("Unknown key");
-	}
-	else if (isSpecial(key)) {
+	if (isSpecial(key)) {
 		result = specialKeyText(key);
 	}
 	else {
-		auto &optionalUnicode = s_unicodeForKey[key];
+		const auto &optionalUnicode = s_unicodeForNativeKeyCode[nativeKeyCode];
 
 		if (!optionalUnicode) {
 			SPDLOG_WARN("Key released, but we don't know its unicode representation.");
 		}
 		else {
-			auto &unicode = optionalUnicode.value();
-
+			const auto &unicode = optionalUnicode.value();
 			result = slint::SharedString(unicode.data());
 		}
 	}
@@ -235,35 +225,27 @@ std::optional<slint::SharedString> SlintWrapperWindow::handleKeyReleaseEvent(KDG
 	return result;
 }
 
-std::optional<slint::SharedString> SlintWrapperWindow::handleTextInputEvent(std::string_view text, std::optional<KDGui::Key> &lastKeyPressed)
+std::optional<slint::SharedString> SlintWrapperWindow::handleTextInputEvent(std::string_view text, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKdGuiKeyPressed)
 {
 	std::optional<slint::SharedString> result = {};
 
-	if (!lastKeyPressed) {
-		// this happens with backspace, which is a special key which also sends a textInputEvent
-		SPDLOG_INFO("TextInputEvent recieved, but physical key is unknown or a special key.");
-	}
-	else if (isSpecial(lastKeyPressed.value())) {
+	if (isSpecial(lastKdGuiKeyPressed.value())) {
 		SPDLOG_WARN("TextInputEvent recieved, but last key is special key.");
 	}
-	else if (isUnknownKey(lastKeyPressed.value())) {
-		SPDLOG_WARN("TextInputEvent recieved, but last key is unknow key.");
-	}
 	else {
-		auto &optionalUnicode = s_unicodeForKey[lastKeyPressed.value()];
+		auto &optionalUnicode = s_unicodeForNativeKeyCode[lastNativeKeyCodePressed];
 
-		// optional will only be null once. every time a key is pressed it will be written to.
-		if (!optionalUnicode)
-			optionalUnicode.emplace();
+		// Initialize each time as there might be remnants of different text for this keycode if it was
+		// invoked with different modifiers
+		optionalUnicode.emplace();
 
-		auto &textBuffer = optionalUnicode.value();
 		// NOTE: this check relies on the event's text and the text buffer
 		// containing the same size chars
-		if (text.size() > textBuffer.size()) {
+		if (text.size() > s_maxUnicodeCharacterForKey) {
 			SPDLOG_WARN("Unicode key representation longer than expected, aborting.");
 		}
 		else {
-			std::memcpy(textBuffer.data(), text.data(), text.size());
+			std::memcpy(optionalUnicode.value().data(), text.data(), text.size());
 			result = slint::SharedString(optionalUnicode.value().data());
 		}
 	}
