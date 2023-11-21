@@ -51,25 +51,24 @@ void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
 void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
 {
 #ifdef CURL_AVAILABLE
-	static auto &uiPageHttp = httpSingleton;
-	static HttpTransferHandle *httpTransfer = nullptr;
-
-	uiPageHttp.set_url("https://example.com");
-
-	auto onHttpTransferFinished = [&](int result) {
-		spdlog::info("HttpTransferHandle::finished() signal triggered for URL {}", httpTransfer->url().url());
-		const auto fetchedContent = (result == CURLcode::CURLE_OK) ? httpTransfer->dataRead() : std::string();
-		uiPageHttp.set_fetched_content(slint::SharedString(fetchedContent));
-		delete httpTransfer;
-	};
-
+	httpSingleton.set_url("https://example.com");
 	auto startHttpQuery = [&]() {
-		const auto &url = Url(uiPageHttp.get_url().data());
-		httpTransfer = new HttpTransferHandle(url, true);
-		httpTransfer->finished.connect(onHttpTransferFinished);
+		const auto url = Url(httpSingleton.get_url().data());
+		auto *httpTransfer = new HttpTransferHandle(url, true);
+
+		httpTransfer->finished.connect([=, &httpSingleton](int result) {
+			const auto fetchedContent =
+				(result == CURLcode::CURLE_OK)
+					? slint::SharedString(httpTransfer->dataRead())
+					: slint::SharedString("Download failed");
+			httpSingleton.set_fetched_content(fetchedContent);
+			delete httpTransfer; // TODO: use deferred deletion once it's 
+								 // implemented in KDUtils
+		});
+
 		NetworkAccessManager::instance().registerTransfer(*httpTransfer);
 	};
-	uiPageHttp.on_request_http_query(startHttpQuery);
+	httpSingleton.on_request_http_query(startHttpQuery);
 #endif
 }
 
