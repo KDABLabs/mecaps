@@ -10,15 +10,25 @@ using namespace KDFoundation;
 class NetworkAccessManagerUnitTestHarness;
 using FileDescriptorNotifierMap = std::unordered_map<int,std::unique_ptr<FileDescriptorNotifier>>;
 
-class NetworkAccessManager
+class INetworkAccessManager
+{
+  public:
+	virtual bool registerTransfer(AbstractTransferHandle &transferHandle) const = 0;
+	virtual bool unregisterTransfer(AbstractTransferHandle &transferHandle) const = 0;
+
+  protected:
+	virtual ~INetworkAccessManager() {};
+};
+
+class NetworkAccessManager : public INetworkAccessManager
 {
 	friend class NetworkAccessManagerUnitTestHarness;
 
   public:
 	static NetworkAccessManager &instance();
 
-	bool registerTransfer(AbstractTransferHandle &transferHandle);
-	bool unregisterTransfer(AbstractTransferHandle &transferHandle);
+	bool registerTransfer(AbstractTransferHandle &transferHandle) const final;
+	bool unregisterTransfer(AbstractTransferHandle &transferHandle) const final;
 
   private:
 	NetworkAccessManager();

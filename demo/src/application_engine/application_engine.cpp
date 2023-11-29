@@ -2,7 +2,6 @@
 #ifdef CURL_AVAILABLE
 #include "ftp_transfer_handle.h"
 #include "http_transfer_handle.h"
-#include "network_access_manager.h"
 #endif
 #ifdef MOSQUITTO_AVAILABLE
 #include "mqtt.h"
@@ -17,20 +16,26 @@ ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindo
 
 ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &appWindow)
 {
+	const auto &appSingleton = appWindow->global<AppSingleton>();
+
 #ifdef SPDLOG_ACTIVE_LEVEL
 	spdlog::set_level(spdlog::level::level_enum(SPDLOG_ACTIVE_LEVEL));
 #endif
-	const auto &appSingleton = appWindow->global<AppSingleton>();
-#ifndef CURL_AVAILABLE
+
+	InitCounterDemo(appWindow->global<CounterSingleton>());
+
+#ifdef CURL_AVAILABLE
+	const auto &networkAccessManager = NetworkAccessManager::instance();
+	InitHttpDemo(appWindow->global<HttpSingleton>(), networkAccessManager);
+	InitFtpDemo(appWindow->global<FtpSingleton>(), networkAccessManager);
+#else
 	appSingleton.set_curl_available(false);
 #endif
+
 #ifndef MOSQUITTO_AVAILABLE
 	appSingleton.set_mosquitto_available(false);
 #endif
 
-	InitCounterDemo(appWindow->global<CounterSingleton>());
-	InitHttpDemo(appWindow->global<HttpSingleton>());
-	InitFtpDemo(appWindow->global<FtpSingleton>());
 	InitMqttDemo(appWindow->global<MqttSingleton>());
 }
 
@@ -48,7 +53,7 @@ void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
 	uiPageCounter.on_request_increase_value(incrementCounterValue);
 }
 
-void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
+void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton, const INetworkAccessManager &networkAccessManager)
 {
 #ifdef CURL_AVAILABLE
 	httpSingleton.set_url("https://example.com");
@@ -66,13 +71,13 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton)
 								 // implemented in KDUtils
 		});
 
-		NetworkAccessManager::instance().registerTransfer(*httpTransfer);
+		networkAccessManager.registerTransfer(*httpTransfer);
 	};
 	httpSingleton.on_request_http_query(startHttpQuery);
 #endif
 }
 
-void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
+void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INetworkAccessManager &networkAccessManager)
 {
 #ifdef CURL_AVAILABLE
 	static auto &uiPageFtp = ftpSingleton;
@@ -98,10 +103,10 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
 		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
 		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);
-		NetworkAccessManager::instance().registerTransfer(*ftpDownloadTransfer);
+		networkAccessManager.registerTransfer(*ftpDownloadTransfer);
 		uiPageFtp.set_is_downloading(true);
 	};
-	uiPageFtp.on_request_ftp_download( [&] { startFtpDownload(); } );
+	uiPageFtp.on_request_ftp_download(startFtpDownload);
 
 	auto onFtpExampleUploadTransferFinished = [&]() {
 		spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
@@ -118,10 +123,10 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton)
 		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
 		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
 		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
-		NetworkAccessManager::instance().registerTransfer(*ftpUploadTransfer);
+		networkAccessManager.registerTransfer(*ftpUploadTransfer);
 		uiPageFtp.set_is_uploading(true);
 	};
-	uiPageFtp.on_request_ftp_upload( [&] { startFtpUpload(); } );
+	uiPageFtp.on_request_ftp_upload(startFtpUpload);
 #endif
 }
 

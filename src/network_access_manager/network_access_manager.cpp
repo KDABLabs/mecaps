@@ -23,14 +23,14 @@ NetworkAccessManager &NetworkAccessManager::instance()
 	return s_instance;
 }
 
-bool NetworkAccessManager::registerTransfer(AbstractTransferHandle &transferHandle)
+bool NetworkAccessManager::registerTransfer(AbstractTransferHandle &transferHandle) const
 {
 	spdlog::debug("NetworkAccessManager::registerTransfer()");
 	auto rc = curl_multi_add_handle(m_handle, transferHandle.handle());
 	return checkCurlMultiResultAndDoDebugPrints(rc);
 }
 
-bool NetworkAccessManager::unregisterTransfer(AbstractTransferHandle &transferHandle)
+bool NetworkAccessManager::unregisterTransfer(AbstractTransferHandle &transferHandle) const
 {
 	spdlog::debug("NetworkAccessManager::unregisterTransfer()");
 	auto rc = curl_multi_remove_handle(m_handle, transferHandle.handle());
