@@ -14,8 +14,8 @@ target_link_libraries(${TARGET_NAME}
 )
 
 if(BUILD_TESTS)
-    set(UNITTESST_TARGET_NAME test_${TARGET_NAME})
-    add_executable(${UNITTESST_TARGET_NAME} tst_network_access_manager.cpp tst_libcurl_stub.h)
-    target_link_libraries(${UNITTESST_TARGET_NAME} PRIVATE ${TARGET_NAME} doctest::doctest)
+    set(UNITTEST_TARGET_NAME test_${TARGET_NAME})
+    add_executable(${UNITTEST_TARGET_NAME} tst_network_access_manager.cpp tst_libcurl_stub.h)
+    target_link_libraries(${UNITTEST_TARGET_NAME} PRIVATE ${TARGET_NAME} doctest::doctest)
 endif()
 
