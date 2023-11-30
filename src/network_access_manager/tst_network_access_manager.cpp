@@ -37,7 +37,7 @@ class GenericTransferHandleUnitTest : public AbstractTransferHandle
 	GenericTransferHandleUnitTest(const Url &url, bool verbose = false) : AbstractTransferHandle(url, verbose) { }
 
   protected:
-	virtual void transferDoneCallbackImpl(CURLcode reault) override { }
+	void transferDoneCallbackImpl(CURLcode reault) override { }
 };
 
 class AbstractTransferHandleUnitTestHarness
@@ -54,8 +54,8 @@ class GenericFtpTransferHandleUnitTest : public AbstractFtpTransferHandle
 	GenericFtpTransferHandleUnitTest(const Url &url, bool verbose = false) : AbstractFtpTransferHandle(url, verbose) { }
 
   protected:
-	virtual int progressCallbackImpl(curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) override { return -1; }
-	virtual void transferDoneCallbackImpl(CURLcode reault) override { }
+	int progressCallbackImpl(curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) override { return -1; }
+	void transferDoneCallbackImpl(CURLcode reault) override { }
 };
 
 class AbstractFtpTransferHandleUnitTestHarness
