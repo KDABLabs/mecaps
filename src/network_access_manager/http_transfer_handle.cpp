@@ -12,7 +12,7 @@ std::string HttpTransferHandle::dataRead() const
 	return m_writeBuffer.str();
 }
 
-size_t HttpTransferHandle::writeCallbackImpl(char *data, size_t size, size_t nmemb)
+size_t HttpTransferHandle::writeCallbackImpl(const char *data, size_t size, size_t nmemb)
 {
 	const size_t realsize = size * nmemb;
 	const auto chunk = std::string(data, nmemb);

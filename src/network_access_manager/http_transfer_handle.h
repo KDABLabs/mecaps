@@ -11,7 +11,7 @@ class HttpTransferHandle : public AbstractTransferHandle
 	std::string dataRead() const;
 
   protected:
-	virtual size_t writeCallbackImpl(char *data, size_t size, size_t nmemb) override;
+	virtual size_t writeCallbackImpl(const char *data, size_t size, size_t nmemb) override;
 	virtual void transferDoneCallbackImpl(CURLcode result) override { /* nothing to do */ }
 
 	std::ostringstream m_writeBuffer; // TODO -> this is most probalby not how we want to maintain data read during transfer(?)

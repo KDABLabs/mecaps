@@ -25,8 +25,8 @@ class AbstractTransferHandle
 	std::string error() const;
 
   protected:
-	virtual size_t readCallbackImpl(char *data, size_t size, size_t nmemb);
-	virtual size_t writeCallbackImpl(char *data, size_t size, size_t nmemb);
+	virtual size_t readCallbackImpl(const char *data, size_t size, size_t nmemb);
+	virtual size_t writeCallbackImpl(const char *data, size_t size, size_t nmemb);
 	virtual void transferDoneCallbackImpl(CURLcode result) = 0;
 
 	CURL *m_handle;
@@ -34,7 +34,7 @@ class AbstractTransferHandle
 	char m_errorBuffer[CURL_ERROR_SIZE];
 
   private:
-	static size_t readCallback(char *data, size_t size, size_t nmemb, AbstractTransferHandle *self);
-	static size_t writeCallback(char *data, size_t size, size_t nmemb, AbstractTransferHandle *self);
+	static size_t readCallback(const char *data, size_t size, size_t nmemb, AbstractTransferHandle *self);
+	static size_t writeCallback(const char *data, size_t size, size_t nmemb, AbstractTransferHandle *self);
 	void transferDoneCallback(CURLcode result);
 };

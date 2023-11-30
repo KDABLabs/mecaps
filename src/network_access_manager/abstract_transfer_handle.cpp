@@ -52,7 +52,7 @@ std::string AbstractTransferHandle::error() const
 	return std::string(m_errorBuffer);
 }
 
-size_t AbstractTransferHandle::readCallbackImpl(char *data, size_t size, size_t nmemb)
+size_t AbstractTransferHandle::readCallbackImpl(const char *data, size_t size, size_t nmemb)
 {
 	const size_t realSize = size * nmemb;
 	{
@@ -65,7 +65,7 @@ size_t AbstractTransferHandle::readCallbackImpl(char *data, size_t size, size_t 
 	return realSize;
 }
 
-size_t AbstractTransferHandle::writeCallbackImpl(char *data, size_t size, size_t nmemb)
+size_t AbstractTransferHandle::writeCallbackImpl(const char *data, size_t size, size_t nmemb)
 {
 	const size_t realSize = size * nmemb;
 	{
@@ -78,12 +78,12 @@ size_t AbstractTransferHandle::writeCallbackImpl(char *data, size_t size, size_t
 	return realSize;
 }
 
-size_t AbstractTransferHandle::readCallback(char *data, size_t size, size_t nmemb, AbstractTransferHandle *self)
+size_t AbstractTransferHandle::readCallback(const char *data, size_t size, size_t nmemb, AbstractTransferHandle *self)
 {
 	return self->readCallbackImpl(data, size, nmemb);
 }
 
-size_t AbstractTransferHandle::writeCallback(char *data, size_t size, size_t nmemb, AbstractTransferHandle *self)
+size_t AbstractTransferHandle::writeCallback(const char *data, size_t size, size_t nmemb, AbstractTransferHandle *self)
 {
 	return self->writeCallbackImpl(data, size, nmemb);
 }
