@@ -80,53 +80,47 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton, const I
 void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INetworkAccessManager &networkAccessManager)
 {
 #ifdef CURL_AVAILABLE
-	static auto &uiPageFtp = ftpSingleton;
-	static FtpDownloadTransferHandle *ftpDownloadTransfer = nullptr;
-	static FtpUploadTransferHandle *ftpUploadTransfer = nullptr;
-
 	static File ftpFile = File("ls-lR.gz");
-	uiPageFtp.set_url_download("ftp://ftp-stud.hs-esslingen.de/debian/ls-lR.gz");
-	uiPageFtp.set_url_upload("ftp://ftp.cs.brown.edu/incoming/ls-lR.gz");
-
-	auto onFtpExampleDownloadTransferFinished = [&]() {
-		spdlog::info("FtpDownloadTransferHandle::finished() - downloaded {} bytes", ftpDownloadTransfer->numberOfBytesTransferred.get());
-		uiPageFtp.set_is_downloading(false);
-		delete ftpDownloadTransfer;
-	};
-
-	auto onFtpExampleDownloadTransferProgressPercentChanged = [&](const int &progressPercent) {
-		uiPageFtp.set_progress_percent_download(progressPercent);
-	};
+	ftpSingleton.set_url_download("ftp://ftp-stud.hs-esslingen.de/debian/ls-lR.gz");
+	ftpSingleton.set_url_upload("ftp://ftp.cs.brown.edu/incoming/ls-lR.gz");
 
 	auto startFtpDownload = [&]() {
-		const auto &url = Url(uiPageFtp.get_url_download().data());
-		ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
-		ftpDownloadTransfer->finished.connect(onFtpExampleDownloadTransferFinished);
-		ftpDownloadTransfer->progressPercent.valueChanged().connect(onFtpExampleDownloadTransferProgressPercentChanged);
+		const auto &url = Url(ftpSingleton.get_url_download().data());
+		auto ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
+
+		ftpDownloadTransfer->finished.connect([=, &ftpSingleton]() {
+			spdlog::info("FtpDownloadTransferHandle::finished() - downloaded {} bytes", ftpDownloadTransfer->numberOfBytesTransferred.get());
+			ftpSingleton.set_is_downloading(false);
+			delete ftpDownloadTransfer;
+		});
+
+		ftpDownloadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
+			ftpSingleton.set_progress_percent_download(progressPercent);
+		});
+
 		networkAccessManager.registerTransfer(*ftpDownloadTransfer);
-		uiPageFtp.set_is_downloading(true);
+		ftpSingleton.set_is_downloading(true);
 	};
-	uiPageFtp.on_request_ftp_download(startFtpDownload);
-
-	auto onFtpExampleUploadTransferFinished = [&]() {
-		spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
-		uiPageFtp.set_is_uploading(false);
-		delete ftpUploadTransfer;
-	};
-
-	auto onFtpExampleUploadTransferProgressPercentChanged = [&](const int &progressPercent) {
-		uiPageFtp.set_progress_percent_upload(progressPercent);
-	};
+	ftpSingleton.on_request_ftp_download(startFtpDownload);
 
 	auto startFtpUpload = [&]() {
-		const auto &url = Url(uiPageFtp.get_url_upload().data());
-		ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
-		ftpUploadTransfer->finished.connect(onFtpExampleUploadTransferFinished);
-		ftpUploadTransfer->progressPercent.valueChanged().connect(onFtpExampleUploadTransferProgressPercentChanged);
+		const auto &url = Url(ftpSingleton.get_url_upload().data());
+		auto ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
+
+		ftpUploadTransfer->finished.connect([=, &ftpSingleton]() {
+			spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
+			ftpSingleton.set_is_uploading(false);
+			delete ftpUploadTransfer;
+		});
+
+		ftpUploadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
+			ftpSingleton.set_progress_percent_upload(progressPercent);
+		});
+
 		networkAccessManager.registerTransfer(*ftpUploadTransfer);
-		uiPageFtp.set_is_uploading(true);
+		ftpSingleton.set_is_uploading(true);
 	};
-	uiPageFtp.on_request_ftp_upload(startFtpUpload);
+	ftpSingleton.on_request_ftp_upload(startFtpUpload);
 #endif
 }
 
