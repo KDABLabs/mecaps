@@ -129,30 +129,29 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 #ifdef MOSQUITTO_AVAILABLE
 	MQTT::libInit();
 
-	static auto &uiPageMqtt = mqttSingleton;
 	static MQTT mqttClient = MQTT("mecapitto", true, true);
 
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
-	uiPageMqtt.set_subscribed_topics(mqttSubscriptionsModel);
+	mqttSingleton.set_subscribed_topics(mqttSubscriptionsModel);
 
 	static auto caFilePath = std::filesystem::current_path().append("mosquitto.org.crt").string();
-	uiPageMqtt.set_ca_file_path(slint::SharedString(caFilePath));
+	mqttSingleton.set_ca_file_path(slint::SharedString(caFilePath));
 
-	uiPageMqtt.set_last_will_topic("farewell");
-	uiPageMqtt.set_last_will_payload("boot(m_incarnations[++i]);");
-	uiPageMqtt.set_username("ro");
-	uiPageMqtt.set_password("readonly");
-	uiPageMqtt.set_url("test.mosquitto.org");
-	uiPageMqtt.set_port(1883);
-	uiPageMqtt.set_topic("my_test_topic");
-	uiPageMqtt.set_payload("DEADBEEF");
+	mqttSingleton.set_last_will_topic("farewell");
+	mqttSingleton.set_last_will_payload("boot(m_incarnations[++i]);");
+	mqttSingleton.set_username("ro");
+	mqttSingleton.set_password("readonly");
+	mqttSingleton.set_url("test.mosquitto.org");
+	mqttSingleton.set_port(1883);
+	mqttSingleton.set_topic("my_test_topic");
+	mqttSingleton.set_payload("DEADBEEF");
 
 	auto mqttTopicValidator = [&]() {
-		const auto topic = uiPageMqtt.get_topic().data();
+		const auto topic = mqttSingleton.get_topic().data();
 		const auto isValid = MQTT::isValidTopicNameForSubscription(topic);
-		uiPageMqtt.set_is_topic_valid(isValid);
+		mqttSingleton.set_is_topic_valid(isValid);
 	};
-	uiPageMqtt.on_user_edited_topic( [&] { mqttTopicValidator(); } );
+	mqttSingleton.on_user_edited_topic(mqttTopicValidator);
 	mqttTopicValidator(); // initial validation of default topic set above
 
 	auto translateConnectionState = [](MQTT::ConnectionState connectionState) -> MqttConnectionState {
@@ -180,12 +179,12 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 	};
 
 	auto onMqttConnectionStateChanged = [&](const MQTT::ConnectionState &connectionState) {
-		uiPageMqtt.set_connection_state(translateConnectionState(connectionState));
+		mqttSingleton.set_connection_state(translateConnectionState(connectionState));
 	};
 	mqttClient.connectionState.valueChanged().connect(onMqttConnectionStateChanged);
 
 	auto onMqttSubscriptionStateChanged = [&](const MQTT::SubscriptionState &subscriptionState) {
-		uiPageMqtt.set_subscription_state(translateSubscriptionState(subscriptionState));
+		mqttSingleton.set_subscription_state(translateSubscriptionState(subscriptionState));
 	};
 	mqttClient.subscriptionState.valueChanged().connect(onMqttSubscriptionStateChanged);
 
@@ -205,24 +204,24 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		const auto timestring = std::string(std::asctime(std::localtime(&timestamp)));
 		const auto topic = std::string(message->topic);
 		const auto payload = std::string(static_cast<char*>(message->payload));
-		uiPageMqtt.set_message(slint::SharedString(timestring.substr(0, timestring.size()-1) + " - " + topic + " - " + payload));
+		mqttSingleton.set_message(slint::SharedString(timestring.substr(0, timestring.size()-1) + " - " + topic + " - " + payload));
 	};
 	mqttClient.msgReceived.connect(onMqttMessageReceived);
 
 	auto connectToMqttBroker = [&]() {
-		const auto setLastWill = uiPageMqtt.get_set_last_will_on_connect();
-		const std::string lastWillTopic = uiPageMqtt.get_last_will_topic().data();
-		const std::string lastWillPayload = uiPageMqtt.get_last_will_payload().data();
+		const auto setLastWill = mqttSingleton.get_set_last_will_on_connect();
+		const std::string lastWillTopic = mqttSingleton.get_last_will_topic().data();
+		const std::string lastWillPayload = mqttSingleton.get_last_will_payload().data();
 
-		const auto setTls = uiPageMqtt.get_set_ca_file_path_on_connect();
-		const std::string tlsCaFilePath = uiPageMqtt.get_ca_file_path().data();
+		const auto setTls = mqttSingleton.get_set_ca_file_path_on_connect();
+		const std::string tlsCaFilePath = mqttSingleton.get_ca_file_path().data();
 
-		const auto setUsernameAndPasswordOnConnect = uiPageMqtt.get_set_username_and_password_on_connect();
-		const std::string username = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_username().data() : std::string();
-		const std::string password = setUsernameAndPasswordOnConnect ? uiPageMqtt.get_password().data() : std::string();
+		const auto setUsernameAndPasswordOnConnect = mqttSingleton.get_set_username_and_password_on_connect();
+		const std::string username = setUsernameAndPasswordOnConnect ? mqttSingleton.get_username().data() : std::string();
+		const std::string password = setUsernameAndPasswordOnConnect ? mqttSingleton.get_password().data() : std::string();
 
-		const auto &url = Url(uiPageMqtt.get_url().data());
-		const auto port = uiPageMqtt.get_port();
+		const auto &url = Url(mqttSingleton.get_url().data());
+		const auto port = mqttSingleton.get_port();
 
 		if (setLastWill)
 			mqttClient.setWill(lastWillTopic, lastWillPayload.size(), &lastWillPayload);
@@ -231,30 +230,30 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		mqttClient.setUsernameAndPassword(username, password);
 		mqttClient.connect(url, port, 10);
 	};
-	uiPageMqtt.on_request_mqtt_connect( [&] { connectToMqttBroker(); });
+	mqttSingleton.on_request_mqtt_connect(connectToMqttBroker);
 
 	auto disconnectFromMqttBroker = [&]() {
 		mqttClient.disconnect();
 	};
-	uiPageMqtt.on_request_mqtt_disconnect( [&] { disconnectFromMqttBroker(); });
+	mqttSingleton.on_request_mqtt_disconnect(disconnectFromMqttBroker);
 
 	auto subscribeToMqttTopic = [&]() {
-		const auto topic = uiPageMqtt.get_topic().data();
+		const auto topic = mqttSingleton.get_topic().data();
 		mqttClient.subscribe(topic);
 	};
-	uiPageMqtt.on_request_mqtt_subscribe( [&] { subscribeToMqttTopic(); } );
+	mqttSingleton.on_request_mqtt_subscribe(subscribeToMqttTopic);
 
 	auto unsubscribeFromMqttTopic = [&](slint::SharedString topic) {
 		mqttClient.unsubscribe(topic.data());
 	};
-	uiPageMqtt.on_request_mqtt_unsubscribe( [&](slint::SharedString topic) { unsubscribeFromMqttTopic(topic); } );
+	mqttSingleton.on_request_mqtt_unsubscribe(unsubscribeFromMqttTopic);
 
 	auto publishMqttMessage = [&]() {
-		const auto topic = uiPageMqtt.get_topic().data();
-		const std::string payload = uiPageMqtt.get_payload().data();
+		const auto topic = mqttSingleton.get_topic().data();
+		const std::string payload = mqttSingleton.get_payload().data();
 		mqttClient.publish(NULL, topic, payload.length(), payload.c_str());
 	};
-	uiPageMqtt.on_request_mqtt_publish( [&] { publishMqttMessage(); } );
+	mqttSingleton.on_request_mqtt_publish(publishMqttMessage);
 #endif
 }
 
