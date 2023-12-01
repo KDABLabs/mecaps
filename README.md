@@ -4,7 +4,6 @@
 
 A template for a C++ application using
 KDUtils as cross-platform application core library, Slint for the user interface and CMake for the build system.
-Find more information [here](https://wiki.kdab.com/pages/viewpage.action?pageId=211616399).
 
 ## About
 
@@ -64,3 +63,28 @@ sudo apt install build-essential cmake git libxkbcommon-dev libxcb-xkb-dev libxk
         ```
         build\demo\mecaps_demo_ui.exe
         ```
+
+## Licensing
+
+Mecaps is (C) 2023 Klarälvdalens Datakonsult AB, and is available under
+the terms of the [MIT](https://github.com/KDABLabs/mecaps/blob/main/LICENSES/MIT.txt)
+or the [Apache-2.0](https://github.com/KDABLabs/mecaps/blob/main/LICENSES/Apache-2.0.txt)
+licenses.
+
+Contact KDAB at <info@kdab.com> to inquire about additional features or
+services related to this project.
+
+## About KDAB
+
+Mecaps is supported and maintained by Klarälvdalens Datakonsult AB (KDAB).
+
+The KDAB Group is the global No.1 software consultancy for Qt, C++ and
+OpenGL applications across desktop, embedded and mobile platforms.
+
+The KDAB Group provides consulting and mentoring for developing Qt applications
+from scratch and in porting from all popular and legacy frameworks to Qt.
+We continue to help develop parts of Qt and are one of the major contributors
+to the Qt Project. We can give advanced or standard trainings anywhere
+around the globe on Qt as well as C++, OpenGL, 3D and more.
+
+Please visit https://www.kdab.com to meet the people who write code like this.
