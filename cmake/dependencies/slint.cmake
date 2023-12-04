@@ -3,12 +3,10 @@ find_package(Slint QUIET)
 if (NOT Slint_FOUND)
   message("Slint could not be located in the CMake module search path. Downloading it from Git and building it locally")
 
-  set(SLINT_FEATURE_EXPERIMENTAL ON)
   # set(SLINT_FEATURE_BACKEND_WINIT OFF) # this removes X11 support
   set(SLINT_FEATURE_BACKEND_QT OFF)
   set(SLINT_FEATURE_BACKEND_WINIT_WAYLAND ON)
   set(SLINT_FEATURE_RENDERER_SKIA ON)
-  set(SLINT_FEATURE_WAYLAND ON)
 
   FetchContent_Declare(
     Slint
