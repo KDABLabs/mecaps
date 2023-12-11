@@ -3,7 +3,12 @@
 **M**odern **E**mbedded **C**++ **AP**plication **S**tarter.
 
 A template for a C++ application using
-KDUtils as cross-platform application core library, Slint for the user interface and CMake for the build system.
+[KDUtils](https://github.com/KDAB/KDUtils) as cross-platform application core library, [Slint](https://slint.dev) for the user interface and CMake for the build system.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/MadeWithSlint-logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/MadeWithSlint-logo-light.svg">
+  <img alt="#MadeWithSlint logo." src="docs/images/MadeWithSlint-logo-light.svg">
+</picture>
 
 ## About
 
@@ -20,12 +25,12 @@ In order to use this template and build a C++ application, you need to install a
 
   * **[cmake](https://cmake.org/download/)** (3.21 or newer)
   * **[git](https://git-scm.com/)** (to fetch dependencies)
-  * **[slint](https://slint-ui.com/docs/cpp/cmake.html#binary-packages)** (optional)
+  * **[slint](https://slint.dev/)** (optional)
   * C++ compiler that supports C++ 20
 
 If your target environment is Linux or Windows on an x86-64 architecture, then you may also opt into downloading one of Slint's binary packages. These are pre-compiled and require no further tools. You can find setup instructions and download links at
 
-<https://slint-ui.com/docs/cpp/cmake.html#binary-packages>
+<https://slint.dev/docs/cpp/cmake.html#binary-packages>
 
 Alternatively, this template will automatically download the Slint sources and compile them. This option requires you to install Rust by following the [Rust Getting Started Guide](https://www.rust-lang.org/learn/get-started). Once this is done, you should have the ```rustc``` compiler and the ```cargo``` build system installed in your path.
 
