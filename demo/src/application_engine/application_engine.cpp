@@ -67,8 +67,7 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton, const I
 					? slint::SharedString(httpTransfer->dataRead())
 					: slint::SharedString("Download failed");
 			httpSingleton.set_fetched_content(fetchedContent);
-			delete httpTransfer; // TODO: use deferred deletion once it's 
-								 // implemented in KDUtils
+			httpTransfer->deleteLater();
 		});
 
 		networkAccessManager.registerTransfer(*httpTransfer);
@@ -91,7 +90,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 		ftpDownloadTransfer->finished.connect([=, &ftpSingleton]() {
 			spdlog::info("FtpDownloadTransferHandle::finished() - downloaded {} bytes", ftpDownloadTransfer->numberOfBytesTransferred.get());
 			ftpSingleton.set_is_downloading(false);
-			delete ftpDownloadTransfer;
+			ftpDownloadTransfer->deleteLater();
 		});
 
 		ftpDownloadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
@@ -110,7 +109,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 		ftpUploadTransfer->finished.connect([=, &ftpSingleton]() {
 			spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
 			ftpSingleton.set_is_uploading(false);
-			delete ftpUploadTransfer;
+			ftpUploadTransfer->deleteLater();
 		});
 
 		ftpUploadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {

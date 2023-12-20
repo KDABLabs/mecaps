@@ -2,12 +2,14 @@
 
 #include <curl/curl.h>
 #include <kdbindings/signal.h>
+#include <KDFoundation/object.h>
 #include <KDUtils/url.h>
 #include <string>
 
+using namespace KDFoundation;
 using namespace KDUtils;
 
-class AbstractTransferHandle
+class AbstractTransferHandle : public Object
 {
 	friend class AbstractTransferHandleUnitTestHarness;
 	friend class NetworkAccessManager;
