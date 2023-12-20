@@ -5,6 +5,8 @@
 
 class HttpTransferHandle : public AbstractTransferHandle
 {
+	friend class HttpTransferHandleUnitTestHarness;
+
   public:
 	explicit HttpTransferHandle(const Url &url, bool verbose = false);
 
