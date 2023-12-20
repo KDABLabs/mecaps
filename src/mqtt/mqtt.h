@@ -9,7 +9,7 @@
 using namespace KDFoundation;
 using namespace KDUtils;
 
-class MQTT : private mosqpp::mosquittopp
+class IMQTT
 {
   public:
 	enum class ConnectionState {
@@ -26,12 +26,6 @@ class MQTT : private mosqpp::mosquittopp
 		UNSUBSCRIBED
 	};
 
-	static int libInit();
-	static int libCleanup();
-
-	MQTT(const std::string &clientId, bool cleanSession = true, bool verbose = false);
-	~MQTT();
-
 	KDBindings::Property<ConnectionState> connectionState { ConnectionState::DISCONNECTED };
 	KDBindings::Property<SubscriptionState> subscriptionState { SubscriptionState::UNSUBSCRIBED };
 
@@ -42,17 +36,49 @@ class MQTT : private mosqpp::mosquittopp
 
 	KDBindings::Signal<> error;
 
-	int setTls(const File &cafile);
-	int setUsernameAndPassword(const std::string &username, const std::string &password);
-	int setWill(const std::string &topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false);
+	virtual int setTls(const File &cafile) = 0;
+	virtual int setUsernameAndPassword(const std::string &username, const std::string &password) = 0;
+	virtual int setWill(const std::string &topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false) = 0;
 
-	int connect(const Url &host, int port = 1883, int keepalive = 60);
-	int disconnect();
+	virtual int connect(const Url &host, int port = 1883, int keepalive = 60) = 0;
+	virtual int disconnect() = 0;
 
-	int publish(int *msgId, const char *topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false);
+	virtual int publish(int *msgId, const char *topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false) = 0;
 
-	int subscribe(const char *pattern, int qos = 0);
-	int unsubscribe(const char *pattern);
+	virtual int subscribe(const char *pattern, int qos = 0) = 0;
+	virtual int unsubscribe(const char *pattern) = 0;
+};
+
+class MQTT : public IMQTT, private mosqpp::mosquittopp
+{
+  public:
+	static int libInit();
+	static int libCleanup();
+
+	MQTT(const std::string &clientId, bool cleanSession = true, bool verbose = false);
+	~MQTT();
+
+//	KDBindings::Property<ConnectionState> connectionState { ConnectionState::DISCONNECTED };
+//	KDBindings::Property<SubscriptionState> subscriptionState { SubscriptionState::UNSUBSCRIBED };
+
+//	KDBindings::Property<std::vector<std::string>> subscriptions { };
+
+//	KDBindings::Signal<int> msgPublished;
+//	KDBindings::Signal<const mosquitto_message *> msgReceived;
+
+//	KDBindings::Signal<> error;
+
+	int setTls(const File &cafile) override;
+	int setUsernameAndPassword(const std::string &username, const std::string &password) override;
+	int setWill(const std::string &topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false) override;
+
+	int connect(const Url &host, int port = 1883, int keepalive = 60) override;
+	int disconnect() override;
+
+	int publish(int *msgId, const char *topic, int payloadlen = 0, const void *payload = NULL, int qos = 0, bool retain = false) override;
+
+	int subscribe(const char *pattern, int qos = 0) override;
+	int unsubscribe(const char *pattern) override;
 
 	static bool isValidTopicNameForSubscription(std::string_view topic);
 
