@@ -9,10 +9,29 @@ target_link_libraries(${TARGET_NAME} PUBLIC mecaps::kdgui_slint_integration)
 
 if (BUILD_INTEGRATION_CURL)
     target_link_libraries(${TARGET_NAME} PUBLIC mecaps::network_access_manager)
-    target_compile_definitions(${TARGET_NAME} PRIVATE CURL_AVAILABLE)
+    target_compile_definitions(${TARGET_NAME} PUBLIC CURL_AVAILABLE)
 endif()
 
 if (BUILD_INTEGRATION_MQTT)
     target_link_libraries(${TARGET_NAME} PUBLIC mecaps::mqtt)
-    target_compile_definitions(${TARGET_NAME} PRIVATE MOSQUITTO_AVAILABLE)
+    target_compile_definitions(${TARGET_NAME} PUBLIC MOSQUITTO_AVAILABLE)
+endif()
+
+if(BUILD_TESTS)
+    include(doctest)
+    set(UNITTEST_TARGET_NAME test_${TARGET_NAME})
+    add_executable(${UNITTEST_TARGET_NAME} tst_application_engine.cpp)
+    target_include_directories(${UNITTEST_TARGET_NAME} PRIVATE
+        ${CMAKE_BINARY_DIR}/_deps/kdutils-src/tests/auto/foundation/common
+        ${CMAKE_BINARY_DIR}/_deps/slint-src/api/cpp/include
+    )
+    target_link_libraries(${UNITTEST_TARGET_NAME} PRIVATE ${TARGET_NAME} doctest::doctest)
+    doctest_discover_tests(
+        ${UNITTEST_TARGET_NAME}
+        ADD_LABELS
+        1
+        PROPERTIES
+        LABELS
+        "mecaps"
+    )
 endif()
