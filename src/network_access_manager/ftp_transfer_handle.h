@@ -31,6 +31,8 @@ class AbstractFtpTransferHandle : public AbstractTransferHandle
 
 class FtpDownloadTransferHandle : public AbstractFtpTransferHandle
 {
+	friend class FtpDownloadTransferHandleUnitTestHarness;
+
   public:
 	FtpDownloadTransferHandle(File &file, const Url &url, bool verbose = false);
 
@@ -42,6 +44,8 @@ class FtpDownloadTransferHandle : public AbstractFtpTransferHandle
 
 class FtpUploadTransferHandle : public AbstractFtpTransferHandle
 {
+	friend class FtpUploadTransferHandleUnitTestHarness;
+
   public:
 	FtpUploadTransferHandle(File &file, const Url &url, bool verbose = false);
 
