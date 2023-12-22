@@ -5,7 +5,10 @@
     #pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquittopp REQUIRED)
 #endif()
 
-file (DOWNLOAD https://test.mosquitto.org/ssl/mosquitto.org.crt mosquitto.org.crt)
+file (DOWNLOAD
+   https://test.mosquitto.org/ssl/mosquitto.org.crt
+   ${CMAKE_BINARY_DIR}/mosquitto.org.crt
+)
 
 #find_package(libmosquitto REQUIRED)
 
