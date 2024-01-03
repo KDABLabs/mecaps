@@ -8,13 +8,17 @@ class ApplicationEngine
 {
 	friend class ApplicationEngineUnitTestHarness;
 
-  public:
-	static ApplicationEngine &init(const slint::ComponentHandle<AppWindow> &appWindow);
-
   private:
 	ApplicationEngine(const slint::ComponentHandle<AppWindow> &appWindow);
 	~ApplicationEngine();
 
+	ApplicationEngine(const ApplicationEngine&) = delete;
+	ApplicationEngine &operator=(const ApplicationEngine&) = delete;
+
+  public:
+	static ApplicationEngine &init(const slint::ComponentHandle<AppWindow> &appWindow);
+
+  private:
 	static void InitCounterDemo(const CounterSingleton &uiPageCounter);
 	static void InitHttpDemo(const HttpSingleton &httpSingleton, const INetworkAccessManager &networkAccessManager);
 	static void InitFtpDemo(const FtpSingleton &ftpSingleton, const INetworkAccessManager &networkAccessManager);
