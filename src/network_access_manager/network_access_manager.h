@@ -24,6 +24,13 @@ class NetworkAccessManager : public INetworkAccessManager
 {
 	friend class NetworkAccessManagerUnitTestHarness;
 
+  private:
+	NetworkAccessManager();
+	~NetworkAccessManager();
+
+	NetworkAccessManager(const NetworkAccessManager&) = delete;
+	NetworkAccessManager &operator=(const NetworkAccessManager&) = delete;
+
   public:
 	static NetworkAccessManager &instance();
 
@@ -31,9 +38,6 @@ class NetworkAccessManager : public INetworkAccessManager
 	bool unregisterTransfer(AbstractTransferHandle &transferHandle) const final;
 
   private:
-	NetworkAccessManager();
-	~NetworkAccessManager();
-
 	static int socketCallback(CURL *handle, curl_socket_t socket, int eventType, NetworkAccessManager *self, void *);
 	static int timerCallback(CURLM *handle, long timeoutMs, Timer *timeoutTimer);
 
