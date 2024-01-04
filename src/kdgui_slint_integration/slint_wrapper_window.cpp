@@ -7,25 +7,23 @@
 namespace mecaps {
 using PointerEventButton = slint::cbindgen_private::PointerEventButton;
 
-static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButton button)
+static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButtons buttons)
 {
-	switch (button) {
-	case KDGui::MouseButton::NoButton:
+	if (buttons.testFlag(KDGui::MouseButton::NoButton)) {
 		return PointerEventButton::Other;
-		break;
-	case KDGui::MouseButton::LeftButton:
+	}
+	else if (buttons.testFlag(KDGui::MouseButton::LeftButton)) {
 		return PointerEventButton::Left;
-		break;
-	case KDGui::MouseButton::RightButton:
+	}
+	else if (buttons.testFlag(KDGui::MouseButton::RightButton)) {
 		return PointerEventButton::Right;
-		break;
-	case KDGui::MouseButton::MiddleButton:
+	}
+	else if (buttons.testFlag(KDGui::MouseButton::MiddleButton)) {
 		return PointerEventButton::Middle;
-		break;
-	default:
+	}
+	else {
 		SPDLOG_WARN("Unknown pointer button type.");
 		return PointerEventButton::Other;
-		break;
 	}
 }
 
@@ -130,7 +128,7 @@ void SlintWrapperWindow::mousePressEvent(KDGui::MousePressEvent *event)
 			.x = static_cast<float>(event->xPos()) * scale,
 			.y = static_cast<float>(event->yPos()) * scale,
 		}),
-		kdGuiToPointerEventButton(static_cast<KDGui::MouseButton>(event->buttons())));
+		kdGuiToPointerEventButton(static_cast<KDGui::MouseButtons>(event->buttons())));
 	event->setAccepted(true);
 }
 
@@ -147,7 +145,7 @@ void SlintWrapperWindow::mouseReleaseEvent(KDGui::MouseReleaseEvent *event)
 			.x = static_cast<float>(event->xPos()) * scale,
 			.y = static_cast<float>(event->yPos()) * scale,
 		}),
-		kdGuiToPointerEventButton(static_cast<KDGui::MouseButton>(event->buttons())));
+		kdGuiToPointerEventButton(static_cast<KDGui::MouseButtons>(event->buttons())));
 	event->setAccepted(true);
 }
 
