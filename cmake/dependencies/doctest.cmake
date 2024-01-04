@@ -8,6 +8,8 @@ if (NOT doctest_FOUND)
     )
     FetchContent_MakeAvailable(doctest)
 
+    list(APPEND CMAKE_MODULE_PATH ${doctest_SOURCE_DIR}/scripts/cmake)
+
     target_include_directories(
         doctest
         INTERFACE $<BUILD_INTERFACE:${doctest_SOURCE_DIR}/doctest>

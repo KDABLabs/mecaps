@@ -16,6 +16,8 @@ option(BUILD_INTEGRATION_MQTT "Build MQTT Integration" ON) # this will be overri
 option(BUILD_TESTS "Build Tests" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/ECM/find-modules")
+
+include(CTest)
 include(cmake/dependencies.cmake)
 
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
