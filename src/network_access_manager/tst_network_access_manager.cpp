@@ -88,34 +88,30 @@ struct CurlDummyHandle {
 CurlDummyHandle curlDummyMultiHandle;
 void *dummyMultiHandlePtr = &curlDummyMultiHandle;
 
+auto app = CoreApplication();
 
-TEST_SUITE("NetworkAccessManager::instance()")
+
+TEST_SUITE("NetworkAccessManager and TransferHandles")
 {
-	// NOTE: Due to NetworkAccessManager being a singleton, instantiation
-	// and initialization of NetworkAccessManager is only done on first call
-	// of NetworkAccessManager::instance().
-	// We maintain all initialization related tests in this individual TEST_SUITE
-	// so that the lifetime of NetworkAccessManager has a scope matching the
-	// initialization related tests. Thus we are _independent of_ and do not
-	// _interfere with_ other tests in this file.
-	// Additionally we maintain all initialization related tests in one single(!)
-	// TEST_CASE to ensure all initialization test related function calls and
-	// assertions of this test are done in the correct order.
-	// If we would split the initialization related tests into multipe TEST_CASEs
-	// and / or SUBCASES, we would have to ensure all tests can be run independent
-	// of each other generating valid results. This would be tricky because
-	// NetworkAccessManager is a singleton.
-
 	TEST_CASE("NetworkAccessManager::instance() triggers initialization on first call only")
 	{
+		// NOTE: Due to NetworkAccessManager being a singleton, instantiation and initialization
+		// of NetworkAccessManager is only done on first call of NetworkAccessManager::instance().
+		// ---------------------------------------------------------------------------------------
+		// IF YOU RUN THIS TEST_CASE YOU HAVE TO RUN IT BEFORE ALL OTHER TEST_CASES IN THIS FILE!
+		// IF THIS TEST IS NOT RUN FIRST, IT WILL FAIL!
+		// ---------------------------------------------------------------------------------------
+		// However it is okay to run other TEST_CASES with this TEST_CASE disabled and/or in any
+		// order of execution
+
 		fff_setup();
+		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
+		NetworkAccessManagerUnitTestHarness unitTestHarness;
 
 		// NetworkAccessManager::instance() triggers initialization on first call
 		{
 			// GIVEN
-			curl_multi_init_fake.return_val = dummyMultiHandlePtr;
 			NetworkAccessManager::instance();
-			NetworkAccessManagerUnitTestHarness unitTestHarness;
 
 			// THEN (libcurl)
 			REQUIRE(curl_global_init_fake.call_count == 1);
@@ -148,18 +144,13 @@ TEST_SUITE("NetworkAccessManager::instance()")
 			REQUIRE(curl_global_init_fake.call_count == 1);
 		}
 	}
-}
-
-
-TEST_SUITE("NetworkAccessManager and TransferHandles")
-{
-	auto app = CoreApplication();
 
 	TEST_CASE("AbstractTransferHandle")
 	{
 		fff_setup();
 		CurlDummyHandle curlDummyEasyHandle;
 		void *dummyEasyHandlePtr = &curlDummyEasyHandle;
+
 		const auto url = Url("www.example.com");
 
 		// curl_easy_setopt has three function parameters
@@ -387,6 +378,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 		fff_setup();
 		CurlDummyHandle dummyEasyHandle;
 		void *dummyEasyHandlePtr = &dummyEasyHandle;
+
 		const auto url = Url("www.example.com");
 
 		// curl_easy_setopt has three function parameters
@@ -431,6 +423,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 		fff_setup();
 		CurlDummyHandle dummyEasyHandle;
 		void *dummyEasyHandlePtr = &dummyEasyHandle;
+
 		const auto url = Url("www.example.com");
 		const auto testFilePath = std::filesystem::temp_directory_path().append("testFile.txt").string();
 		auto testFile = File(testFilePath);
@@ -629,7 +622,6 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 	TEST_CASE("NetworkAccessManager::(un)registerTransfer()")
 	{
 		fff_setup();
-
 		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
 		auto &networkAccessManager = NetworkAccessManager::instance();
 
@@ -713,9 +705,11 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 	TEST_CASE("NetworkAccessManager::socketCallback()")
 	{
 		fff_setup();
+		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
+		NetworkAccessManagerUnitTestHarness unitTestHarness;
+
 		CurlDummyHandle dummyEasyHandle;
 		void *dummyEasyHandlePtr = &dummyEasyHandle;
-		NetworkAccessManagerUnitTestHarness unitTestHarness;
 
 		SUBCASE("Registers FileDescriptorNotifier with type 'Read' for socket on CURL_POLL_IN event")
 		{
@@ -795,7 +789,9 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 	TEST_CASE("NetworkAccessManager::timerCallback()")
 	{
 		fff_setup();
+		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
 		NetworkAccessManagerUnitTestHarness unitTestHarness;
+
 		const auto &timeoutTimer = unitTestHarness.timeoutTimer();
 
 		SUBCASE("TimeoutTimer times out after requested timeout value")
@@ -840,7 +836,9 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 	TEST_CASE("NetworkAccessManager::onFileDescriptorNotifierTriggered()")
 	{
 		fff_setup();
+		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
 		NetworkAccessManagerUnitTestHarness unitTestHarness;
+
 		const int socket = 0;
 
 		SUBCASE("When FileDescriptorNotifier fires, timeout timer is stopped")
@@ -907,6 +905,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 	TEST_CASE("NetworkAccessManager::onTimeoutTimerTriggered()")
 	{
 		fff_setup();
+		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
 		NetworkAccessManagerUnitTestHarness unitTestHarness;
 
 		SUBCASE("When TimeoutTimer fires, curl_multi_socket_action() is called")
@@ -934,11 +933,10 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 	TEST_CASE("NetworkAccessManager::processTransferMessages()")
 	{
 		fff_setup();
-
 		curl_multi_init_fake.return_val = dummyMultiHandlePtr;
-		auto &networkAccessManager = NetworkAccessManager::instance();
 		NetworkAccessManagerUnitTestHarness unitTestHarness;
 
+		auto &networkAccessManager = NetworkAccessManager::instance();
 		const auto url = Url("www.example.com");
 		HttpTransferHandle transfer(url);
 
