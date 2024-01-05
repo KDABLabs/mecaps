@@ -10,8 +10,6 @@ if (NOT Slint_FOUND)
   set(SLINT_FEATURE_RENDERER_SKIA ON)
   set(SLINT_FEATURE_WAYLAND ON)
 
-  include(FetchContent)
-
   FetchContent_Declare(
     Slint
     GIT_REPOSITORY https://github.com/slint-ui/slint.git
