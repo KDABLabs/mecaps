@@ -1,6 +1,7 @@
 #include <KDGui/kdgui_keys.h>
 #include <spdlog/spdlog.h>
 #include <slint.h>
+#include <array>
 
 using enum KDGui::Key;
 namespace sk = slint::platform::key_codes;
