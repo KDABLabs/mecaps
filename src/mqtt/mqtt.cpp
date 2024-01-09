@@ -31,7 +31,8 @@ int MQTT::libCleanup()
 }
 
 MQTT::MQTT(const std::string &clientId, bool cleanSession, bool verbose)
-	: m_verbose{verbose}
+	: mosqpp::mosquittopp(clientId.c_str(), cleanSession)
+	, m_verbose{verbose}
 {
 	if (!s_isLibInitialized) {
 		spdlog::warn("MQTT::MQTT() - CTOR called before MQTT::libInit(). Initialize lib before instantiating MQTT object!");
