@@ -2,13 +2,13 @@
 # TODO
 # check here if mosquitto is present for now.
 # override BUILD_INTEGRATION_MQTT accordingly.
-# remove this as soon as we support build of libmosquittopp on all OSes
+# remove this as soon as we support build of libmosquitto on all OSes
 # and we are always able to build mqtt integration in case
 # BUILD_INTEGRATION_MQTT is set to ON.
 find_package(PkgConfig)
 
 if (UNIX AND PKG_CONFIG_FOUND)
-    pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquittopp REQUIRED)
+    pkg_check_modules(Mosquitto IMPORTED_TARGET libmosquitto REQUIRED)
 endif()
 
 if (Mosquitto_FOUND AND BUILD_INTEGRATION_MQTT)
