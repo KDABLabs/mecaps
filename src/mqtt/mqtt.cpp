@@ -1,116 +1,163 @@
 #include "mqtt.h"
 #include <spdlog/spdlog.h>
 
-constexpr std::chrono::milliseconds miscTaskTimerInterval = std::chrono::milliseconds(1000);
+constexpr std::chrono::milliseconds c_miscTaskInterval = std::chrono::milliseconds(1000);
 
 using namespace KDFoundation;
-using namespace mosqpp;
 
-bool MQTT::s_isLibInitialized = false;
+MqttLib::MqttLib()
+	: m_isInitialized{false}
+	, m_mosquittoLib(&MosquittoLib::instance())
+{
+	
+}
 
-int MQTT::libInit()
+MqttLib &MqttLib::instance()
+{
+	static MqttLib s_instance;
+	return s_instance;
+}
+
+int MqttLib::init()
 {
 	int result = MOSQ_ERR_UNKNOWN;
 
-	if (!s_isLibInitialized) {
-		const auto result = mosqpp::lib_init();
-		const auto hasError = checkMosquitoppResultAndDoDebugPrints(result, "MQTT::libInit()");
-		s_isLibInitialized = hasError ? s_isLibInitialized : true;
+	if (!m_isInitialized) {
+		result = m_mosquittoLib->init();
+		const auto hasError = checkMosquittoResultAndDoDebugPrints(result, "MqttLib::init()");
+		m_isInitialized = !hasError;
+		if (m_isInitialized) {
+			int major, minor, revision = 0;
+			version(&major, &minor, &revision);
+			spdlog::info("MqttLib::init() - using libmosquitto v{}.{}.{}", major, minor, revision);
+		}
 	} else {
-		spdlog::warn("MQTT::libInit() - Library is already initialized.");
+		spdlog::warn("MqttLib::init() - Library is already initialized.");
 	}
 	return result;
 }
 
-int MQTT::libCleanup()
+int MqttLib::cleanup()
 {
-	const auto result = mosqpp::lib_cleanup();
-	const auto hasError = checkMosquitoppResultAndDoDebugPrints(result, "MQTT::libCleanup()");
-	s_isLibInitialized = hasError ? s_isLibInitialized : false;
+	const auto result = m_mosquittoLib->cleanup();
+	const auto hasError = checkMosquittoResultAndDoDebugPrints(result, "MqttLib::cleanup()");
+	m_isInitialized = hasError ? m_isInitialized : false;
 	return result;
 }
 
-MQTT::MQTT(const std::string &clientId, bool cleanSession, bool verbose)
+bool MqttLib::isInitialized() const
+{
+	return m_isInitialized;
+}
+
+bool MqttLib::isValidTopicNameForSubscription(const std::string &topic)
+{
+	return m_mosquittoLib->isValidTopicNameForSubscription(topic);
+}
+
+int MqttLib::version(int *major, int *minor, int *revision)
+{
+	return m_mosquittoLib->version(major, minor, revision);
+}
+
+bool MqttLib::checkMosquittoResultAndDoDebugPrints(int result, std::string_view func)
+{
+	const auto isError = (result != MOSQ_ERR_SUCCESS);
+	if (isError) {
+		const auto funcString = func.empty() ? "mosquitto function" : func;
+		spdlog::error("{} - error: {}", funcString, errorString(result));
+	}
+	return isError;
+}
+
+std::string_view MqttLib::connackString(int connackCode)
+{
+	return m_mosquittoLib->connackString(connackCode);
+}
+
+std::string_view MqttLib::errorString(int errorCode)
+{
+	return m_mosquittoLib->errorString(errorCode);
+}
+
+std::string_view MqttLib::reasonString(int reasonCode)
+{
+	return m_mosquittoLib->reasonString(reasonCode);
+}
+
+MqttClient::MqttClient(const std::string &clientId, bool cleanSession, bool verbose)
 	: m_verbose{verbose}
 {
-	if (!s_isLibInitialized) {
-		spdlog::warn("MQTT::MQTT() - CTOR called before MQTT::libInit(). Initialize lib before instantiating MQTT object!");
+	if (!MqttLib::instance().isInitialized()) {
+		spdlog::warn("MqttClient::MqttClient() - CTOR called before MqttLib::init(). Initialize lib before instantiating MqttClient object!");
 	}
 
-	if (m_verbose) {
-		int major, minor, revision = 0;
-		mosqpp::lib_version(&major, &minor, &revision);
-		spdlog::info("MQTT::MQTT() - using libmosquitto v{}.{}.{}", major, minor, revision);
+	auto *client = new MosquittoClient(clientId, cleanSession);
+	m_mosquitto.init(client, this);
 
-//		TODO -> add as soon as get_ssl() is added to mosquittopp API
-//		const auto sslStruct = mosquittopp::get_ssl();
-//		spdlog::info("MQTT::MQTT() - TLS connections are {}", sslStruct ? "enabled" : "not enabled");
-	}
+	m_eventLoopHook.init(c_miscTaskInterval, this);
 }
 
-MQTT::~MQTT()
+int MqttClient::setTls(const File &cafile)
 {
-
-}
-
-int MQTT::setTls(const File &cafile)
-{
-	spdlog::debug("MQTT::setTls() - cafile: {}", cafile.path());
+	spdlog::debug("MqttClient::setTls() - cafile: {}", cafile.path());
 
 	if (connectionState.get() != ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::setTls() - Setting TLS is only allowed when disconnected.");
+		spdlog::error("MqttClient::setTls() - Setting TLS is only allowed when disconnected.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
 	if (!cafile.exists()) {
-		spdlog::error("MQTT::setTls() - cafile does not exist.");
+		spdlog::error("MqttClient::setTls() - cafile does not exist.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
-	const auto result = mosquittopp::tls_set(cafile.path().c_str());
-	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::setTls()");
+	std::optional<const std::string> nullopt;
+	const auto result = m_mosquitto.client()->tlsSet(cafile.path(), nullopt, nullopt, nullopt);
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::setTls()");
+
 	return result;
 }
 
-int MQTT::setUsernameAndPassword(const std::string &username, const std::string &password)
+int MqttClient::setUsernameAndPassword(const std::string &username, const std::string &password)
 {
-	spdlog::debug("MQTT::setUsernameAndPassword()");
+	spdlog::debug("MqttClient::setUsernameAndPassword()");
 
 	if (connectionState.get() != ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::setUsernameAndPassword() - Setting AUTH is only allowed when disconnected.");
+		spdlog::error("MqttClient::setUsernameAndPassword() - Setting AUTH is only allowed when disconnected.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
-	const auto result = mosquittopp::username_pw_set(username.c_str(), password.c_str());
-	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::setUsernameAndPassword()");
+	const auto result = m_mosquitto.client()->usernamePasswordSet(username, password);
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::setUsernameAndPassword()");
 	return result;
 }
 
-int MQTT::setWill(const std::string &topic, int payloadlen, const void *payload, int qos, bool retain)
+int MqttClient::setWill(const std::string &topic, int payloadlen, const void *payload, int qos, bool retain)
 {
-	spdlog::debug("MQTT::setWill() - topic:{}, qos:{}, retain:{})", topic, qos, retain);
+	spdlog::debug("MqttClient::setWill() - topic:{}, qos:{}, retain:{})", topic, qos, retain);
 
 	if (connectionState.get() != ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::setWill() - Setting will is only allowed when disconnected.");
+		spdlog::error("MqttClient::setWill() - Setting will is only allowed when disconnected.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
-	const auto result = mosquittopp::will_set(topic.c_str(), payloadlen, payload, qos, retain);
-	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::setWill()");
+	const auto result = m_mosquitto.client()->willSet(topic.c_str(), payloadlen, payload, qos, retain);
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::setWill()");
 	return result;
 }
 
-int MQTT::connect(const Url &host, int port, int keepalive)
+int MqttClient::connect(const Url &host, int port, int keepalive)
 {
-	spdlog::debug("MQTT::connect() - host:{}, port:{}, keepalive:{})", host.url(), port, keepalive);
+	spdlog::debug("MqttClient::connect() - host:{}, port:{}, keepalive:{})", host.url(), port, keepalive);
 
 	if (connectionState.get() == ConnectionState::CONNECTING) {
-		spdlog::error("MQTT::connect() - Already connecting to host.");
+		spdlog::error("MqttClient::connect() - Already connecting to host.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
 	if (connectionState.get() == ConnectionState::CONNECTED) {
-		spdlog::error("MQTT::connect() - Already connected to a host. Disconnect from current host first.");
+		spdlog::error("MqttClient::connect() - Already connected to a host. Disconnect from current host first.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
@@ -121,64 +168,64 @@ int MQTT::connect(const Url &host, int port, int keepalive)
 	// other people seem to have encountered similiar behaviour before, though this issue should have been fixed a while ago
 	// -> https://github.com/eclipse/mosquitto/issues/990
 	const auto start = clock();
-	const auto result = mosquittopp::connect(host.url().c_str(), port, keepalive);
+	const auto result = m_mosquitto.client()->connect(host.url().c_str(), port, keepalive);
 	const auto end = clock();
 	const auto elapsedTimeMs = std::round((double(end-start) / double(CLOCKS_PER_SEC)) * 1000000.0);
-	spdlog::info("MQTT::connect() - blocking call of mosquittopp::connect() took {} µs", elapsedTimeMs);
+	spdlog::info("MqttClient::connect() - blocking call of MosquittoClient::connect() took {} µs", elapsedTimeMs);
 
-	const auto hasError = checkMosquitoppResultAndDoDebugPrints(result, "MQTT::connect()");
+	const auto hasError = MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::connect()");
 	if (!hasError) {
-		hookToEventLoop();
+		m_eventLoopHook.engage(m_mosquitto.client()->socket());
 	}
 	return result;
 }
 
-int MQTT::disconnect()
+int MqttClient::disconnect()
 {
-	spdlog::debug("MQTT::disconnect()");
+	spdlog::debug("MqttClient::disconnect()");
 
 	if (connectionState.get() == ConnectionState::DISCONNECTING) {
-		spdlog::error("MQTT::connect() - Already diconnecting from host.");
+		spdlog::error("MqttClient::disconnect() - Already diconnecting from host.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
 	if (connectionState.get() == ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::disconnect() - Not connected to any host.");
+		spdlog::error("MqttClient::disconnect() - Not connected to any host.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
 	connectionState.set(ConnectionState::DISCONNECTING);
-	const auto result = mosquittopp::disconnect();
-	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::disconnect()");
+	const auto result = m_mosquitto.client()->disconnect();
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::disconnect()");
 	return result;
 }
 
-int MQTT::publish(int *msgId, const char *topic, int payloadlen, const void *payload, int qos, bool retain)
+int MqttClient::publish(int *msgId, const char *topic, int payloadlen, const void *payload, int qos, bool retain)
 {
-	spdlog::debug("MQTT::publish() - topic:{}, qos:{}, retain:{}", topic, qos, retain);
+	spdlog::debug("MqttClient::publish() - topic:{}, qos:{}, retain:{}", topic, qos, retain);
 
 	if (connectionState.get() == ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::publish() - Not connected to any host.");
+		spdlog::error("MqttClient::publish() - Not connected to any host.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
-	const auto result = mosquittopp::publish(msgId, topic, payloadlen, payload, qos, retain);
-	checkMosquitoppResultAndDoDebugPrints(result, "MQTT::publish()");
+	const auto result = m_mosquitto.client()->publish(msgId, topic, payloadlen, payload, qos, retain);
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::publish()");
 	return result;
 }
 
-int MQTT::subscribe(const char *pattern, int qos)
+int MqttClient::subscribe(const char *pattern, int qos)
 {
-	spdlog::debug("MQTT::subscribe() - subscribe pattern:{}, qos:{}", pattern, qos);
+	spdlog::debug("MqttClient::subscribe() - subscribe pattern:{}, qos:{}", pattern, qos);
 
 	if (connectionState.get() == ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::subscribe() - Not connected to any host.");
+		spdlog::error("MqttClient::subscribe() - Not connected to any host.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
 	int msgId;
-	const auto result = mosquittopp::subscribe(&msgId, pattern, qos);
-	const auto hasError = checkMosquitoppResultAndDoDebugPrints(result, "MQTT::subscribe()");
+	const auto result = m_mosquitto.client()->subscribe(&msgId, pattern, qos);
+	const auto hasError = MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::subscribe()");
 	if (!hasError) {
 		const auto topic = std::string(pattern);
 		m_subscriptionsRegistry.registerPendingRegistryOperation(topic, msgId);
@@ -187,18 +234,18 @@ int MQTT::subscribe(const char *pattern, int qos)
 	return result;
 }
 
-int MQTT::unsubscribe(const char *pattern)
+int MqttClient::unsubscribe(const char *pattern)
 {
-	spdlog::debug("MQTT::unsubscribe() - unsubscribe pattern:{}", pattern);
+	spdlog::debug("MqttClient::unsubscribe() - unsubscribe pattern:{}", pattern);
 
 	if (connectionState.get() == ConnectionState::DISCONNECTED) {
-		spdlog::error("MQTT::unsubscribe() - Not connected to any host.");
+		spdlog::error("MqttClient::unsubscribe() - Not connected to any host.");
 		return MOSQ_ERR_UNKNOWN;
 	}
 
 	int msgId;
-	const auto result = mosquittopp::unsubscribe(&msgId, pattern);
-	const auto hasError = checkMosquitoppResultAndDoDebugPrints(result, "MQTT::unsubscribe()");
+	const auto result = m_mosquitto.client()->unsubscribe(&msgId, pattern);
+	const auto hasError = MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::unsubscribe()");
 	if (!hasError) {
 		const auto topic = std::string(pattern);
 		m_subscriptionsRegistry.registerPendingRegistryOperation(topic, msgId);
@@ -207,16 +254,9 @@ int MQTT::unsubscribe(const char *pattern)
 	return result;
 }
 
-bool MQTT::isValidTopicNameForSubscription(std::string_view topic)
+void MqttClient::onConnected(int connackCode)
 {
-	// TODO -> in case adding mosqpp::sub_topic_check() is accepted upstream, use it here
-	const auto result = validate_utf8(topic.data(), topic.length());
-	return (result == MOSQ_ERR_SUCCESS);
-}
-
-void MQTT::on_connect(int connackCode)
-{
-	spdlog::debug("MQTT::on_connect() - connackCode({}): {}", connackCode, mosqpp::connack_string(connackCode));
+	spdlog::debug("MqttClient::onConnected() - connackCode({}): {}", connackCode, MqttLib::instance().connackString(connackCode));
 	const auto hasError = (connackCode != 0);
 	if (hasError) {
 		// TODO -> I'm uncertain if calling unhookFromEventLoop() here is perfectly fine in every case
@@ -231,156 +271,197 @@ void MQTT::on_connect(int connackCode)
 	connectionState.set(state);
 }
 
-void MQTT::on_disconnect(int reasonCode)
+void MqttClient::onDisconnected(int reasonCode)
 {
-	// TODO -> in case adding mosqpp::reason_string() is accepted upstream, use it here
-	spdlog::debug("MQTT::on_disconnect() - reasonCode({})", reasonCode);
+	spdlog::debug("MqttClient::onDisconnected() - reasonCode({}): {}", reasonCode, MqttLib::instance().reasonString(reasonCode));
 
-	unhookFromEventLoop();
+	m_eventLoopHook.disengage();
 
 	connectionState.set(ConnectionState::DISCONNECTED);
 }
 
-void MQTT::on_publish(int msgId)
+void MqttClient::onPublished(int msgId)
 {
-	spdlog::debug("MQTT::on_publish() - msgId:{}", msgId);
+	spdlog::debug("MqttClient::onPublished() - msgId:{}", msgId);
 	msgPublished.emit(msgId);
 }
 
-void MQTT::on_message(const mosquitto_message *message)
+void MqttClient::onMessage(const mosquitto_message *message)
 {
-	spdlog::debug("MQTT::on_message() - message.id:{}, message.topic:{}", message->mid, message->topic);
+	spdlog::debug("MqttClient::onMessage() - message.id:{}, message.topic:{}", message->mid, message->topic);
 	msgReceived.emit(message);
 }
 
-void MQTT::on_subscribe(int msgId, int qos_count, const int *granted_qos)
+void MqttClient::onSubscribed(int msgId, int qosCount, const int *grantedQos)
 {
-	// mosquitto_subscribe_multiple is not part of the C++ API mosquittopp
-	// thus we only handle subscriptions to one single topic with one single QOS value for now.
-	// in case mosquitto_subscribe_multiple is added to mosquittopp some time in the future,
+	// we only handle subscriptions to one single topic with one single QOS value for now.
+	// in case mosquitto_subscribe_multiple is added to MosquittoClient some time in the future,
 	// add handling of multiple topic/QOS pairs here.
-	assert(qos_count==1);
+	assert(qos_count == 1);
 
-	const auto topic = m_subscriptionsRegistry.registerTopicSubscriptionAndReturnTopicName(msgId, granted_qos[0]);
-	spdlog::debug("MQTT::on_subscribe() - msgId:{}, topic:{}, qosCount:{}, grantedQos:{}", msgId, topic, qos_count, granted_qos[0]);
+	const auto topic = m_subscriptionsRegistry.registerTopicSubscriptionAndReturnTopicName(msgId, grantedQos[0]);
+	spdlog::debug("MqttClient::onSubscribed() - msgId:{}, topic:{}, qosCount:{}, grantedQos:{}", msgId, topic, qosCount, grantedQos[0]);
 
 	const auto state = m_subscriptionsRegistry.subscribedTopics().empty() ? SubscriptionState::UNSUBSCRIBED : SubscriptionState::SUBSCRIBED;
 	subscriptionState.set(state);
 	subscriptions.set(m_subscriptionsRegistry.subscribedTopics());
 }
 
-void MQTT::on_unsubscribe(int msgId)
+void MqttClient::onUnsubscribed(int msgId)
 {
 	const auto topic = m_subscriptionsRegistry.unregisterTopicSubscriptionAndReturnTopicName(msgId);
-	spdlog::debug("MQTT::on_unsubscribe() - msgId:{}, topic:{}", msgId, topic);
+	spdlog::debug("MqttClient::onUnsubscribed() - msgId:{}, topic:{}", msgId, topic);
 
 	const auto state = m_subscriptionsRegistry.subscribedTopics().empty() ? SubscriptionState::UNSUBSCRIBED : SubscriptionState::SUBSCRIBED;
 	subscriptionState.set(state);
 	subscriptions.set(m_subscriptionsRegistry.subscribedTopics());
 }
 
-void MQTT::on_log(int level, const char *str)
+void MqttClient::onLog(int level, const char *str) const
 {
 	if (m_verbose) {
-		spdlog::info("MQTT::on_log() - level:{}, string:{})", level, str);
+		spdlog::info("MqttClient::onLog() - level:{}, string:{})", level, str);
 	}
 }
 
-void MQTT::on_error()
+void MqttClient::onError()
 {
-	spdlog::error("MQTT::on_error()");
+	spdlog::error("MqttClient::onError()");
 	error.emit();
 }
 
-void MQTT::hookToEventLoop()
+void MqttClient::onReadOpRequested()
 {
-	spdlog::debug("MQTT::hookToEventLoop()");
-
-	if (m_fdnRead || m_fdnWrite || m_miscTaskTimer) {
-		spdlog::error("MQTT::hookToEventLoop() - Already hooked to event loop.");
-		return;
-	}
-
-	const auto socket = mosquittopp::socket();
-
-	m_fdnRead = std::make_unique<FileDescriptorNotifier>(socket, FileDescriptorNotifier::NotificationType::Read);
-	m_fdnWrite = std::make_unique<FileDescriptorNotifier>(socket, FileDescriptorNotifier::NotificationType::Write);
-
-	m_fdnRead->triggered.connect([this]() { onFileDescriptorNotifierTriggeredRead(); } );
-	m_fdnWrite->triggered.connect([this]() { onFileDescriptorNotifierTriggeredWrite(); } );
-
-	m_miscTaskTimer = std::make_unique<Timer>();
-	m_miscTaskTimer->interval.set(miscTaskTimerInterval);
-	m_miscTaskTimer->timeout.connect([this]() { onMiscTaskTimerTriggered(); } );
-	m_miscTaskTimer->running.set(true);
+	auto result = m_mosquitto.client()->loopRead();
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "loopRead()");
 }
 
-void MQTT::unhookFromEventLoop()
+void MqttClient::onWriteOpRequested()
 {
-	spdlog::debug("MQTT::unhookFromEventLoop()");
-
-	if (!(m_fdnRead && m_fdnWrite && m_miscTaskTimer)) {
-		spdlog::error("MQTT::hookToEventLoop() - Already unhooked from event loop.");
-		return;
-	}
-
-	m_fdnRead->triggered.disconnectAll();
-	m_fdnWrite->triggered.disconnectAll();
-	m_miscTaskTimer->timeout.disconnectAll();
-
-	m_fdnRead = {};
-	m_fdnWrite = {};
-	m_miscTaskTimer = {};
-}
-
-void MQTT::onFileDescriptorNotifierTriggeredRead()
-{
-	auto result = loop_read();
-	checkMosquitoppResultAndDoDebugPrints(result, "loop_read()");
-}
-
-void MQTT::onFileDescriptorNotifierTriggeredWrite()
-{
-	const auto writeOpIsPending = mosquittopp::want_write();
+	const auto writeOpIsPending = m_mosquitto.client()->wantWrite();
 	if (!writeOpIsPending) {
 		return;
 	}
 
-	auto result = loop_write();
-	checkMosquitoppResultAndDoDebugPrints(result, "loop_write()");
+	auto result = m_mosquitto.client()->loopWrite();
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "loopWrite()");
 }
 
-void MQTT::onMiscTaskTimerTriggered()
+void MqttClient::onMiscTaskRequested()
 {
-	auto result = loop_misc();
-	checkMosquitoppResultAndDoDebugPrints(result, "loop_misc()");
+	auto result = m_mosquitto.client()->loopMisc();
+	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "loopMisc()");
 }
 
-bool MQTT::checkMosquitoppResultAndDoDebugPrints(int result, std::string_view func)
+void MqttClient::EventLoopHook::init(const std::chrono::milliseconds miscTaskInterval, MqttClient *parent)
 {
-	const auto isError = (result != MOSQ_ERR_SUCCESS);
-	if (isError) {
-		const auto funcString = func.empty() ? "mosquittopp function" : func;
-		const auto errorString = mosqpp::strerror(result);
-		spdlog::error("{} - error: {}", funcString, errorString);
+	spdlog::debug("MqttClient::EventLoopHook::init()");
+	assert(parent != nullptr);
+
+	this->parent = parent;
+
+	miscTaskTimer = std::make_unique<Timer>();
+	miscTaskTimer->interval.set(miscTaskInterval);
+	miscTaskTimer->running.set(false);
+	miscTaskTimer->timeout.connect(&MqttClient::onMiscTaskRequested, parent);
+}
+
+void MqttClient::EventLoopHook::engage(const int socket)
+{
+	spdlog::debug("MqttClient::EventLoopHook::engage()");
+
+	if (!isSetup()) {
+		spdlog::error("MqttClient::EventLoopHook::engage() - EventLoopHook is not initialized. Call MqttClient::EventLoopHook::init() first.");
+		return;
 	}
-	return isError;
+
+	if (isEngaged()) {
+		spdlog::error("MqttClient::EventLoopHook::engage() - Already engaged.");
+		return;
+	}
+
+	if (socket < 0) {
+		spdlog::error("MqttClient::EventLoopHook::engage() - Invalid socket.");
+		return;
+	}
+
+	readOpNotifier = std::make_unique<FileDescriptorNotifier>(socket, FileDescriptorNotifier::NotificationType::Read);
+	writeOpNotifier = std::make_unique<FileDescriptorNotifier>(socket, FileDescriptorNotifier::NotificationType::Write);
+
+	readOpNotifier->triggered.connect(&MqttClient::onReadOpRequested, parent);
+	writeOpNotifier->triggered.connect(&MqttClient::onWriteOpRequested, parent);
+
+	miscTaskTimer->running.set(true);
 }
 
-void MQTT::SubscriptionsRegistry::registerPendingRegistryOperation(std::string_view topic, int msgId)
+void MqttClient::EventLoopHook::disengage()
 {
+	spdlog::debug("MqttClient::EventLoopHook::disengage()");
+
+	if (!isEngaged()) {
+		spdlog::error("MqttClient::EventLoopHook::disengage() - Already disengaged.");
+		return;
+	}
+
+	miscTaskTimer->running.set(false);
+
+	readOpNotifier->triggered.disconnectAll();
+	writeOpNotifier->triggered.disconnectAll();
+
+	readOpNotifier = {};
+	writeOpNotifier = {};
+}
+
+bool MqttClient::EventLoopHook::isSetup() const
+{
+	return (miscTaskTimer && (parent != nullptr));
+}
+
+bool MqttClient::EventLoopHook::isEngaged() const
+{
+	return (readOpNotifier && writeOpNotifier);
+}
+
+void MqttClient::MosquittoClientDependency::init(MosquittoClient *client, MqttClient *parent)
+{
+	spdlog::debug("MqttClient::MosquittoClientDependency::init()");
+	assert(parent != nullptr);
+
+	delete mosquittoClient;
+	mosquittoClient = client;
+
+	mosquittoClient->connected.connect(&MqttClient::onConnected, parent);
+	mosquittoClient->disconnected.connect(&MqttClient::onDisconnected, parent);
+	mosquittoClient->published.connect(&MqttClient::onPublished, parent);
+	mosquittoClient->message.connect(&MqttClient::onMessage, parent);
+	mosquittoClient->subscribed.connect(&MqttClient::onSubscribed, parent);
+	mosquittoClient->unsubscribed.connect(&MqttClient::onUnsubscribed, parent);
+	mosquittoClient->log.connect(&MqttClient::onLog, parent);
+	mosquittoClient->error.connect(&MqttClient::onError, parent);
+}
+
+MosquittoClient *MqttClient::MosquittoClientDependency::client()
+{
+	return mosquittoClient;
+}
+
+void MqttClient::SubscriptionsRegistry::registerPendingRegistryOperation(std::string_view topic, int msgId)
+{
+	spdlog::debug("MqttClient::SubscriptionsRegistry::registerPendingRegistryOperation() - topic:{}, msgId:{}", topic, msgId);
 	topicByMsgIdOfPendingOperations[msgId] = topic;
 }
 
-std::string MQTT::SubscriptionsRegistry::registerTopicSubscriptionAndReturnTopicName(int msgId, int grantedQos)
+std::string MqttClient::SubscriptionsRegistry::registerTopicSubscriptionAndReturnTopicName(int msgId, int grantedQos)
 {
+	spdlog::debug("MqttClient::SubscriptionsRegistry::registerTopicSubscriptionAndReturnTopicName() - msgId:{}, grantedQos:{}", msgId, grantedQos);
+
 	auto it = topicByMsgIdOfPendingOperations.find(msgId);
 	if (it == topicByMsgIdOfPendingOperations.end()) {
-		spdlog::error("MQTT::SubscriptionsRegistry::registerTopicSubscriptionAndReturnTopicName() - No pending operation with msgId: {}.", msgId);
+		spdlog::error("MqttClient::SubscriptionsRegistry::registerTopicSubscriptionAndReturnTopicName() - No pending operation with msgId: {}.", msgId);
 		return {};
 	}
 
-	const auto topic = it->second;
+	auto topic = it->second;
 	topicByMsgIdOfPendingOperations.erase(it);
 
 	qosByTopicOfActiveSubscriptions[topic] = grantedQos;
@@ -388,15 +469,17 @@ std::string MQTT::SubscriptionsRegistry::registerTopicSubscriptionAndReturnTopic
 	return topic;
 }
 
-std::string MQTT::SubscriptionsRegistry::unregisterTopicSubscriptionAndReturnTopicName(int msgId)
+std::string MqttClient::SubscriptionsRegistry::unregisterTopicSubscriptionAndReturnTopicName(int msgId)
 {
+	spdlog::debug("MqttClient::SubscriptionsRegistry::unregisterTopicSubscriptionAndReturnTopicName() - msgId:{}", msgId);
+	
 	auto it = topicByMsgIdOfPendingOperations.find(msgId);
 	if (it == topicByMsgIdOfPendingOperations.end()) {
-		spdlog::error("MQTT::SubscriptionsRegistry::unregisterTopicSubscriptionAndReturnTopicName() - No pending operation with msgId: {}.", msgId);
+		spdlog::error("MqttClient::SubscriptionsRegistry::unregisterTopicSubscriptionAndReturnTopicName() - No pending operation with msgId: {}.", msgId);
 		return {};
 	}
 
-	const auto topic = it->second;
+	const auto &topic = it->second;
 	topicByMsgIdOfPendingOperations.erase(it);
 
 	qosByTopicOfActiveSubscriptions.erase(topic);
@@ -404,9 +487,10 @@ std::string MQTT::SubscriptionsRegistry::unregisterTopicSubscriptionAndReturnTop
 	return topic;
 }
 
-std::vector<std::string> MQTT::SubscriptionsRegistry::subscribedTopics() const
+std::vector<std::string> MqttClient::SubscriptionsRegistry::subscribedTopics() const
 {
 	std::vector<std::string> keys;
+	keys.reserve(qosByTopicOfActiveSubscriptions.size());
 	for (const auto &pair : qosByTopicOfActiveSubscriptions) {
 		keys.push_back(pair.first);
 	}
@@ -414,7 +498,7 @@ std::vector<std::string> MQTT::SubscriptionsRegistry::subscribedTopics() const
 	return keys;
 }
 
-int MQTT::SubscriptionsRegistry::grantedQosForTopic(const std::string &topic) const
+int MqttClient::SubscriptionsRegistry::grantedQosForTopic(const std::string &topic) const
 {
 	return qosByTopicOfActiveSubscriptions.at(topic);
 }
