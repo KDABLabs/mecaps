@@ -126,9 +126,9 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 {
 #ifdef MOSQUITTO_AVAILABLE
-	MQTT::libInit();
+	MqttLib::instance().init();
 
-	static MQTT mqttClient = MQTT("mecapitto", true, true);
+	static MqttClient mqttClient = MqttClient("mecapitto", true, true);
 
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
 	mqttSingleton.set_subscribed_topics(mqttSubscriptionsModel);
@@ -147,42 +147,42 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 
 	auto mqttTopicValidator = [&]() {
 		const auto topic = mqttSingleton.get_topic().data();
-		const auto isValid = MQTT::isValidTopicNameForSubscription(topic);
+		const auto isValid = MqttLib::instance().isValidTopicNameForSubscription(topic);
 		mqttSingleton.set_is_topic_valid(isValid);
 	};
 	mqttSingleton.on_user_edited_topic(mqttTopicValidator);
 	mqttTopicValidator(); // initial validation of default topic set above
 
-	auto translateConnectionState = [](MQTT::ConnectionState connectionState) -> MqttConnectionState {
+	auto translateConnectionState = [](MqttClient::ConnectionState connectionState) -> MqttConnectionState {
 		switch (connectionState) {
-		case MQTT::ConnectionState::CONNECTING: return MqttConnectionState::Connecting;
-		case MQTT::ConnectionState::CONNECTED: return MqttConnectionState::Connected;
-		case MQTT::ConnectionState::DISCONNECTING: return MqttConnectionState::Disconnecting;
-		case MQTT::ConnectionState::DISCONNECTED: return MqttConnectionState::Disconnected;
+		case MqttClient::ConnectionState::CONNECTING: return MqttConnectionState::Connecting;
+		case MqttClient::ConnectionState::CONNECTED: return MqttConnectionState::Connected;
+		case MqttClient::ConnectionState::DISCONNECTING: return MqttConnectionState::Disconnecting;
+		case MqttClient::ConnectionState::DISCONNECTED: return MqttConnectionState::Disconnected;
 		default:
-			spdlog::error("Cannot translate MQTT::ConnectionState {} to MqttConnectionState!");
+			spdlog::error("Cannot translate IMqttClient::ConnectionState {} to MqttConnectionState!");
 			return MqttConnectionState::Disconnected;
 		}
 	};
 
-	auto translateSubscriptionState = [](MQTT::SubscriptionState subscriptionState) -> MqttSubscriptionState {
+	auto translateSubscriptionState = [](MqttClient::SubscriptionState subscriptionState) -> MqttSubscriptionState {
 		switch (subscriptionState) {
-		case MQTT::SubscriptionState::SUBSCRIBING: return MqttSubscriptionState::Subscribing;
-		case MQTT::SubscriptionState::SUBSCRIBED: return MqttSubscriptionState::Subscribed;
-		case MQTT::SubscriptionState::UNSUBSCRIBING: return MqttSubscriptionState::Unsubscribing;
-		case MQTT::SubscriptionState::UNSUBSCRIBED: return MqttSubscriptionState::Unsubscribed;
+		case MqttClient::SubscriptionState::SUBSCRIBING: return MqttSubscriptionState::Subscribing;
+		case MqttClient::SubscriptionState::SUBSCRIBED: return MqttSubscriptionState::Subscribed;
+		case MqttClient::SubscriptionState::UNSUBSCRIBING: return MqttSubscriptionState::Unsubscribing;
+		case MqttClient::SubscriptionState::UNSUBSCRIBED: return MqttSubscriptionState::Unsubscribed;
 		default:
-			spdlog::error("Cannot translate MQTT::SubscriptionState {} to MqttSubscriptionState!");
+			spdlog::error("Cannot translate IMqttClient::SubscriptionState {} to MqttSubscriptionState!");
 			return MqttSubscriptionState::Unsubscribed;
 		}
 	};
 
-	auto onMqttConnectionStateChanged = [&](const MQTT::ConnectionState &connectionState) {
+	auto onMqttConnectionStateChanged = [&](const MqttClient::ConnectionState &connectionState) {
 		mqttSingleton.set_connection_state(translateConnectionState(connectionState));
 	};
 	mqttClient.connectionState.valueChanged().connect(onMqttConnectionStateChanged);
 
-	auto onMqttSubscriptionStateChanged = [&](const MQTT::SubscriptionState &subscriptionState) {
+	auto onMqttSubscriptionStateChanged = [&](const MqttClient::SubscriptionState &subscriptionState) {
 		mqttSingleton.set_subscription_state(translateSubscriptionState(subscriptionState));
 	};
 	mqttClient.subscriptionState.valueChanged().connect(onMqttSubscriptionStateChanged);
@@ -259,6 +259,6 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 void ApplicationEngine::DeinitMqttDemo()
 {
 #ifdef MOSQUITTO_AVAILABLE
-	MQTT::libCleanup();
+	MqttLib::instance().cleanup();
 #endif
 }
