@@ -3,9 +3,6 @@
 #include "ftp_transfer_handle.h"
 #include "http_transfer_handle.h"
 #endif
-#ifdef MOSQUITTO_AVAILABLE
-#include "mqtt.h"
-#endif
 #include <spdlog/spdlog.h>
 
 ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindow> &appWindow)
@@ -32,16 +29,21 @@ ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &ap
 	appSingleton.set_curl_available(false);
 #endif
 
-#ifndef MOSQUITTO_AVAILABLE
+#ifdef MOSQUITTO_AVAILABLE
+	MqttLib::instance().init();
+	static MqttClient mqttClient = MqttClient("mecapitto", true, true);
+	InitMqttDemo(appWindow->global<MqttSingleton>(), mqttClient);
+#else
 	appSingleton.set_mosquitto_available(false);
 #endif
 
-	InitMqttDemo(appWindow->global<MqttSingleton>());
 }
 
 ApplicationEngine::~ApplicationEngine()
 {
-	DeinitMqttDemo();
+#ifdef MOSQUITTO_AVAILABLE
+	MqttLib::instance().cleanup();
+#endif
 }
 
 void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
@@ -123,13 +125,9 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 #endif
 }
 
-void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
+void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttClient &mqttClient)
 {
 #ifdef MOSQUITTO_AVAILABLE
-	MqttLib::instance().init();
-
-	static MqttClient mqttClient = MqttClient("mecapitto", true, true);
-
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
 	mqttSingleton.set_subscribed_topics(mqttSubscriptionsModel);
 
@@ -253,12 +251,5 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		mqttClient.publish(NULL, topic, payload.length(), payload.c_str());
 	};
 	mqttSingleton.on_request_mqtt_publish(publishMqttMessage);
-#endif
-}
-
-void ApplicationEngine::DeinitMqttDemo()
-{
-#ifdef MOSQUITTO_AVAILABLE
-	MqttLib::instance().cleanup();
 #endif
 }
