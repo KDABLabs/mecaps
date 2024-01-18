@@ -36,5 +36,6 @@ endif()
 
 if(BUILD_TESTS)
     include(cmake/dependencies/doctest.cmake)
+    include(cmake/dependencies/fakeit.cmake)
     include(cmake/dependencies/fff.cmake)
 endif()
