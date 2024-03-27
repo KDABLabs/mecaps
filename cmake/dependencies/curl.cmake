@@ -7,7 +7,7 @@ if (NOT TARGET CURL::libcurl)
     FetchContent_Declare(
         curl
         GIT_REPOSITORY https://github.com/curl/curl.git
-        GIT_TAG curl-8_6_0
+        GIT_TAG curl-8_7_1
     )
     set(BUILD_TESTING OFF CACHE BOOL "Turn off testing" FORCE)
     set(BUILD_CURL_EXE OFF CACHE BOOL "Turn off curl executable" FORCE)
