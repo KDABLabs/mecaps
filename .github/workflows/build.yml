@@ -23,7 +23,7 @@ jobs:
           - Debug
           - Release
     env:
-      SLINT_VERSION: 1.4.1
+      SLINT_VERSION: 1.5.1
 
     steps:
       - name: Checkout sources
@@ -39,9 +39,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update -qq
-          sudo apt install -y libxkbcommon-dev libxcb-xkb-dev \
-          libxkbcommon-x11-dev wayland-scanner++ wayland-protocols \
-          libwayland-dev xvfb libmosquittopp-dev libinput10
+          sudo apt install -y \
+          libinput10 libmosquittopp-dev \
+          libwayland-dev wayland-scanner++ wayland-protocols \
+          libxkbcommon-dev libxkbcommon-x11-dev libxcb-xkb-dev xvfb \
+          qtbase5-dev
 
       - name: Download Slint (Linux)
         if: runner.os == 'Linux'
