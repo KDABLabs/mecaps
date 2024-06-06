@@ -1,0 +1,47 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "MECAPS Dockerfile",
+	"build": {
+		// Sets the run context to one level up instead of the .devcontainer folder.
+		"context": "..",
+		"dockerfile": "../Dockerfile"
+	},
+
+	// Docker root-less Setup (use this in case your host runs root-less Docker)
+	// - changes container user from default user to root which maps to host user
+	// -> https://docs.docker.com/engine/security/rootless/#how-it-works
+	"containerUser": "root",
+
+	// X11 | Wayland Setup
+	// - mounts UDS directory to allow for running GUIs from inside the container
+	// - set environment variables non-statically (using `remoteEnv` instead of `containerEnv`)
+
+	//// X11 (use this in case your host runs X11)
+	"mounts": [ "source=/tmp/.X11-unix/,target=/tmp/.X11-unix/,type=bind" ],
+	"remoteEnv": {
+		"DISPLAY": "${localEnv:DISPLAY}",
+		"XDG_RUNTIME_DIR": "/run/user/${localEnv:UID}"
+	},
+
+	//// Wayland (use this in case your host runs Wayland)
+	// "mounts": [ "source=${localEnv:XDG_RUNTIME_DIR}/${localEnv:WAYLAND_DISPLAY},target=/tmp/${localEnv:WAYLAND_DISPLAY},type=bind" ],
+	// "remoteEnv": {
+	// 	"QT_QPA_PLATFORM": "wayland",
+	// 	"WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+	// 	"XDG_RUNTIME_DIR": "/tmp"
+	// },
+	
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cmake-tools",
+                "ms-vscode.cpptools",
+				"Slint.slint",
+				"vadimcn.vscode-lldb"
+			]
+		}
+	}
+}
