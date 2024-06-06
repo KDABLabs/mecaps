@@ -1,0 +1,30 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "MECAPS Dockerfile",
+	"build": {
+		// Sets the run context to one level up instead of the .devcontainer folder.
+		"context": "..",
+		"dockerfile": "../Dockerfile"
+	},
+
+	// Mount X11 UDS directory to allow for running GUIs from inside the container
+	"mounts": [ "source=/tmp/.X11-unix/,target=/tmp/.X11-unix/,type=bind" ],
+	// Set DISPLAY environment variable non-statically (using `remoteEnv` instead of `containerEnv`)
+	"remoteEnv": { "DISPLAY": "${localEnv:DISPLAY}" },
+
+	// Optional: Setup VNC (requires complementary config in Dockerfile to be enabled also)
+	// "forwardPorts": [5900], // default VNC server port
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"llvm-vs-code-extensions.vscode-clangd",
+				"ms-vscode.cmake-tools",
+                "ms-vscode.cpptools",
+				"Slint.slint",
+				"vadimcn.vscode-lldb"
+			]
+		}
+	}
+}
