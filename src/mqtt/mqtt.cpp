@@ -267,6 +267,12 @@ void MqttClient::onConnected(int connackCode)
 		// we never unhook from event loop. In this case we would need to add the following call here (only for certain connackCodes):
 		// unhookFromEventLoop();
 	}
+
+	if (m_verbose) {
+		const auto tlsIsEnabled = (m_mosquitto.client()->sslGet() != nullptr);
+		spdlog::info("MqttClient::onConnected() - This connection {} TLS encrypted", tlsIsEnabled ? "is" : "is not");
+	}
+
 	const auto state = hasError ? ConnectionState::DISCONNECTED : ConnectionState::CONNECTED;
 	connectionState.set(state);
 }
