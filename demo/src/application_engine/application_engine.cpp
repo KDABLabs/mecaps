@@ -3,9 +3,6 @@
 #include "ftp_transfer_handle.h"
 #include "http_transfer_handle.h"
 #endif
-#ifdef MOSQUITTO_AVAILABLE
-#include "mqtt.h"
-#endif
 #include <spdlog/spdlog.h>
 
 ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindow> &appWindow)
@@ -32,16 +29,21 @@ ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &ap
 	appSingleton.set_curl_available(false);
 #endif
 
-#ifndef MOSQUITTO_AVAILABLE
+#ifdef MOSQUITTO_AVAILABLE
+	MqttLib::instance().init();
+	static MqttClient mqttClient = MqttClient("mecapitto", true, true);
+	InitMqttDemo(appWindow->global<MqttSingleton>(), mqttClient);
+#else
 	appSingleton.set_mosquitto_available(false);
 #endif
 
-	InitMqttDemo(appWindow->global<MqttSingleton>());
 }
 
 ApplicationEngine::~ApplicationEngine()
 {
-	DeinitMqttDemo();
+#ifdef MOSQUITTO_AVAILABLE
+	MqttLib::instance().cleanup();
+#endif
 }
 
 void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
@@ -53,9 +55,9 @@ void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
 	uiPageCounter.on_request_increase_value(incrementCounterValue);
 }
 
+#ifdef CURL_AVAILABLE
 void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton, const INetworkAccessManager &networkAccessManager)
 {
-#ifdef CURL_AVAILABLE
 	httpSingleton.set_url("https://example.com");
 	auto startHttpQuery = [&]() {
 		const auto url = Url(httpSingleton.get_url().data());
@@ -73,12 +75,12 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton, const I
 		networkAccessManager.registerTransfer(*httpTransfer);
 	};
 	httpSingleton.on_request_http_query(startHttpQuery);
-#endif
 }
+#endif
 
+#ifdef CURL_AVAILABLE
 void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INetworkAccessManager &networkAccessManager)
 {
-#ifdef CURL_AVAILABLE
 	static File ftpFile = File("ls-lR.gz");
 	ftpSingleton.set_url_download("ftp://ftp-stud.hs-esslingen.de/debian/ls-lR.gz");
 	ftpSingleton.set_url_upload("ftp://ftp.cs.brown.edu/incoming/ls-lR.gz");
@@ -120,16 +122,12 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 		ftpSingleton.set_is_uploading(true);
 	};
 	ftpSingleton.on_request_ftp_upload(startFtpUpload);
-#endif
 }
+#endif
 
-void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
-{
 #ifdef MOSQUITTO_AVAILABLE
-	MqttLib::instance().init();
-
-	static MqttClient mqttClient = MqttClient("mecapitto", true, true);
-
+void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttClient &mqttClient)
+{
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
 	mqttSingleton.set_subscribed_topics(mqttSubscriptionsModel);
 
@@ -253,12 +251,5 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton)
 		mqttClient.publish(NULL, topic, payload.length(), payload.c_str());
 	};
 	mqttSingleton.on_request_mqtt_publish(publishMqttMessage);
-#endif
 }
-
-void ApplicationEngine::DeinitMqttDemo()
-{
-#ifdef MOSQUITTO_AVAILABLE
-	MqttLib::instance().cleanup();
 #endif
-}
