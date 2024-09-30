@@ -58,7 +58,7 @@ NetworkAccessManager::NetworkAccessManager()
 	rc = curl_multi_setopt(m_handle, CURLMOPT_TIMERDATA, &m_timeoutTimer);
 	checkCurlMultiResultAndDoDebugPrints(rc);
 
-	m_timeoutTimer.timeout.connect([this]() {
+	std::ignore = m_timeoutTimer.timeout.connect([this]() {
 		m_timeoutTimer.running.set(false);
 		onTimeoutTimerTriggered();
 	});
@@ -185,7 +185,7 @@ void NetworkAccessManager::FileDescriptorNotifierRegistry::registerFileDescripto
 	}
 
 	fdnMap[nfd] = std::make_unique<FileDescriptorNotifier>(nfd, fdnType);
-	fdnMap[nfd]->triggered.connect([this, nfd, fdnType]() { NetworkAccessManager::instance().onFileDescriptorNotifierTriggered(nfd, fdnType); });
+	std::ignore = fdnMap[nfd]->triggered.connect([this, nfd, fdnType]() { NetworkAccessManager::instance().onFileDescriptorNotifierTriggered(nfd, fdnType); });
 }
 
 void NetworkAccessManager::FileDescriptorNotifierRegistry::unregisterFileDescriptorNotifier(int nfd, FileDescriptorNotifierMap &fdnMap, FileDescriptorNotifier::NotificationType fdnType)

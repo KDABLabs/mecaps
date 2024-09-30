@@ -980,7 +980,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 				transferIsRunning = false;
 			};
 
-			transfer.finished.connect(onTransferFinished);
+			std::ignore = transfer.finished.connect(onTransferFinished);
 			networkAccessManager.registerTransfer(transfer);
 
 			// WHEN

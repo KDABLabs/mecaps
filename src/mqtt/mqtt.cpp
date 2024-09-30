@@ -1,5 +1,6 @@
 #include "mqtt.h"
 #include <spdlog/spdlog.h>
+#include <utility>
 
 constexpr std::chrono::milliseconds c_miscTaskInterval = std::chrono::milliseconds(1000);
 
@@ -369,7 +370,7 @@ void MqttClient::EventLoopHook::init(const std::chrono::milliseconds miscTaskInt
 	miscTaskTimer = std::make_unique<Timer>();
 	miscTaskTimer->interval.set(miscTaskInterval);
 	miscTaskTimer->running.set(false);
-	miscTaskTimer->timeout.connect(&MqttClient::onMiscTaskRequested, parent);
+	std::ignore = miscTaskTimer->timeout.connect(&MqttClient::onMiscTaskRequested, parent);
 }
 
 void MqttClient::EventLoopHook::engage(const int socket)
@@ -394,8 +395,8 @@ void MqttClient::EventLoopHook::engage(const int socket)
 	readOpNotifier = std::make_unique<FileDescriptorNotifier>(socket, FileDescriptorNotifier::NotificationType::Read);
 	writeOpNotifier = std::make_unique<FileDescriptorNotifier>(socket, FileDescriptorNotifier::NotificationType::Write);
 
-	readOpNotifier->triggered.connect(&MqttClient::onReadOpRequested, parent);
-	writeOpNotifier->triggered.connect(&MqttClient::onWriteOpRequested, parent);
+	std::ignore = readOpNotifier->triggered.connect(&MqttClient::onReadOpRequested, parent);
+	std::ignore = writeOpNotifier->triggered.connect(&MqttClient::onWriteOpRequested, parent);
 
 	miscTaskTimer->running.set(true);
 }
@@ -436,14 +437,14 @@ void MqttClient::MosquittoClientDependency::init(MosquittoClient *client, MqttCl
 	delete mosquittoClient;
 	mosquittoClient = client;
 
-	mosquittoClient->connected.connect(&MqttClient::onConnected, parent);
-	mosquittoClient->disconnected.connect(&MqttClient::onDisconnected, parent);
-	mosquittoClient->published.connect(&MqttClient::onPublished, parent);
-	mosquittoClient->message.connect(&MqttClient::onMessage, parent);
-	mosquittoClient->subscribed.connect(&MqttClient::onSubscribed, parent);
-	mosquittoClient->unsubscribed.connect(&MqttClient::onUnsubscribed, parent);
-	mosquittoClient->log.connect(&MqttClient::onLog, parent);
-	mosquittoClient->error.connect(&MqttClient::onError, parent);
+	std::ignore = mosquittoClient->connected.connect(&MqttClient::onConnected, parent);
+	std::ignore = mosquittoClient->disconnected.connect(&MqttClient::onDisconnected, parent);
+	std::ignore = mosquittoClient->published.connect(&MqttClient::onPublished, parent);
+	std::ignore = mosquittoClient->message.connect(&MqttClient::onMessage, parent);
+	std::ignore = mosquittoClient->subscribed.connect(&MqttClient::onSubscribed, parent);
+	std::ignore = mosquittoClient->unsubscribed.connect(&MqttClient::onUnsubscribed, parent);
+	std::ignore = mosquittoClient->log.connect(&MqttClient::onLog, parent);
+	std::ignore = mosquittoClient->error.connect(&MqttClient::onError, parent);
 }
 
 MosquittoClient *MqttClient::MosquittoClientDependency::client()

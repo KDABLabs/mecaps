@@ -14,7 +14,7 @@ KDGui::Window *createAndIntegrateWindow(slint::PhysicalSize windowSize)
 	platform->aquireWindowAdapter(std::move(windowAdapter));
 	slint_platform::set_platform(std::move(platform));
 
-	window->visible.valueChanged().connect([&](bool visible) {
+	std::ignore = window->visible.valueChanged().connect([&](bool visible) {
 		if (!visible) {
 			slint::quit_event_loop();
 		}

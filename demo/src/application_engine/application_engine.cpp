@@ -63,7 +63,7 @@ void ApplicationEngine::InitHttpDemo(const HttpSingleton &httpSingleton, const I
 		const auto url = Url(httpSingleton.get_url().data());
 		auto *httpTransfer = new HttpTransferHandle(url, true);
 
-		httpTransfer->finished.connect([=, &httpSingleton](int result) {
+		std::ignore = httpTransfer->finished.connect([=, &httpSingleton](int result) {
 			const auto fetchedContent =
 				(result == CURLcode::CURLE_OK)
 					? slint::SharedString(httpTransfer->dataRead())
@@ -89,13 +89,13 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 		const auto &url = Url(ftpSingleton.get_url_download().data());
 		auto ftpDownloadTransfer = new FtpDownloadTransferHandle(ftpFile, url, false);
 
-		ftpDownloadTransfer->finished.connect([=, &ftpSingleton]() {
+		std::ignore = ftpDownloadTransfer->finished.connect([=, &ftpSingleton]() {
 			spdlog::info("FtpDownloadTransferHandle::finished() - downloaded {} bytes", ftpDownloadTransfer->numberOfBytesTransferred.get());
 			ftpSingleton.set_is_downloading(false);
 			ftpDownloadTransfer->deleteLater();
 		});
 
-		ftpDownloadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
+		std::ignore = ftpDownloadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
 			ftpSingleton.set_progress_percent_download(progressPercent);
 		});
 
@@ -108,13 +108,14 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 		const auto &url = Url(ftpSingleton.get_url_upload().data());
 		auto ftpUploadTransfer = new FtpUploadTransferHandle(ftpFile, url, true);
 
-		ftpUploadTransfer->finished.connect([=, &ftpSingleton]() {
+		std::ignore = ftpUploadTransfer->finished.connect([=, &ftpSingleton]() {
 			spdlog::info("FtpUploadTransferHandle::finished() - uploaded {} bytes", ftpUploadTransfer->numberOfBytesTransferred.get());
 			ftpSingleton.set_is_uploading(false);
 			ftpUploadTransfer->deleteLater();
 		});
 
-		ftpUploadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
+		std::ignore = ftpUploadTransfer->progressPercent.valueChanged().connect([&ftpSingleton](const int &progressPercent) {
+			spdlog::info("{}", progressPercent);
 			ftpSingleton.set_progress_percent_upload(progressPercent);
 		});
 
@@ -178,12 +179,12 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 	auto onMqttConnectionStateChanged = [&](const MqttClient::ConnectionState &connectionState) {
 		mqttSingleton.set_connection_state(translateConnectionState(connectionState));
 	};
-	mqttClient.connectionState.valueChanged().connect(onMqttConnectionStateChanged);
+	std::ignore = mqttClient.connectionState.valueChanged().connect(onMqttConnectionStateChanged);
 
 	auto onMqttSubscriptionStateChanged = [&](const MqttClient::SubscriptionState &subscriptionState) {
 		mqttSingleton.set_subscription_state(translateSubscriptionState(subscriptionState));
 	};
-	mqttClient.subscriptionState.valueChanged().connect(onMqttSubscriptionStateChanged);
+	std::ignore = mqttClient.subscriptionState.valueChanged().connect(onMqttSubscriptionStateChanged);
 
 	auto onMqttSubscriptionsChanged = [&] (const std::vector<std::string> &subscriptions) {
 		const auto count = mqttSubscriptionsModel->row_count();
@@ -194,7 +195,7 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 			mqttSubscriptionsModel->push_back(slint::SharedString(topic));
 		}
 	};
-	mqttClient.subscriptions.valueChanged().connect(onMqttSubscriptionsChanged);
+	std::ignore = mqttClient.subscriptions.valueChanged().connect(onMqttSubscriptionsChanged);
 
 	auto onMqttMessageReceived = [&](const mosquitto_message *message) {
 		const auto timestamp = std::time(nullptr);
@@ -203,7 +204,7 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 		const auto payload = std::string(static_cast<char*>(message->payload));
 		mqttSingleton.set_message(slint::SharedString(timestring.substr(0, timestring.size()-1) + " - " + topic + " - " + payload));
 	};
-	mqttClient.msgReceived.connect(onMqttMessageReceived);
+	std::ignore = mqttClient.msgReceived.connect(onMqttMessageReceived);
 
 	auto connectToMqttBroker = [&]() {
 		const auto setLastWill = mqttSingleton.get_set_last_will_on_connect();

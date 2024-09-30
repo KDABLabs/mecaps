@@ -32,7 +32,7 @@ std::vector<std::optional<std::array<char, SlintWrapperWindow::s_maxUnicodeChara
 SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 	: m_adapter(adapter)
 {
-	scaleFactor.valueChanged().connect([this](float newScale) {
+	std::ignore = scaleFactor.valueChanged().connect([this](float newScale) {
 		SPDLOG_DEBUG(
 			"Slint window scale does not match OS window scale. Updating...");
 		m_adapter->window().dispatch_scale_factor_change_event(newScale);
