@@ -23,10 +23,10 @@ RUN apt-get update --quiet && \
     libxcb-xkb-dev \
     libxkbcommon-dev \
     libxkbcommon-x11-dev \
-    qtbase5-dev
+    qt6-base-dev
 
 # Install slint from binary
-ARG SLINT_VERSION=1.7.0
+ARG SLINT_VERSION=1.10.0
 ENV SLINT_INSTALL_DIR=/usr/src/slint
 WORKDIR $SLINT_INSTALL_DIR
 RUN wget --quiet -O - https://github.com/slint-ui/slint/releases/download/v$SLINT_VERSION/Slint-cpp-$SLINT_VERSION-Linux-x86_64.tar.gz | tar xvzf - --strip-components=1
