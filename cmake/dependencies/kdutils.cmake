@@ -6,7 +6,7 @@ if(NOT KDUtils_FOUND)
     FetchContent_Declare(
         KDUtils
         GIT_REPOSITORY https://github.com/kdab/kdutils
-        GIT_TAG 88daab190762040da8927fe1cd8d72176ad278b6 #v0.1.10 plus some bugfix commits
+        GIT_TAG 47a6a4316e25b582e04fe47e98951baa6a6cc5bb
         USES_TERMINAL_DOWNLOAD YES
         USES_TERMINAL_UPDATE YES
     )
