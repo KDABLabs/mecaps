@@ -5,6 +5,8 @@
 #endif
 #include <spdlog/spdlog.h>
 
+using namespace KDMqtt;
+
 ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindow> &appWindow)
 {
 	static ApplicationEngine s_instance(appWindow);
@@ -29,21 +31,15 @@ ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &ap
 	appSingleton.set_curl_available(false);
 #endif
 
-#ifdef MOSQUITTO_AVAILABLE
-	MqttLib::instance().init();
-	static MqttClient mqttClient = MqttClient("mecapitto", true, true);
-	InitMqttDemo(appWindow->global<MqttSingleton>(), mqttClient);
+#ifdef MQTT_AVAILABLE
+	MqttManager::instance().init();
+	MqttManager::ClientOptions options = MqttManager::ClientOption::CLEAN_SESSION | MqttManager::ClientOption::DONT_USE_OS_CERTIFICATE_STORE;
+	static auto mqttClient = MqttManager::instance().createClient("mecapitto", options);
+	InitMqttDemo(appWindow->global<MqttSingleton>(), *mqttClient);
 #else
 	appSingleton.set_mosquitto_available(false);
 #endif
 
-}
-
-ApplicationEngine::~ApplicationEngine()
-{
-#ifdef MOSQUITTO_AVAILABLE
-	MqttLib::instance().cleanup();
-#endif
 }
 
 void ApplicationEngine::InitCounterDemo(const CounterSingleton &uiPageCounter)
@@ -126,7 +122,7 @@ void ApplicationEngine::InitFtpDemo(const FtpSingleton &ftpSingleton, const INet
 }
 #endif
 
-#ifdef MOSQUITTO_AVAILABLE
+#ifdef MQTT_AVAILABLE
 void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttClient &mqttClient)
 {
 	static std::shared_ptr<slint::VectorModel<slint::SharedString>> mqttSubscriptionsModel(new slint::VectorModel<slint::SharedString>);
@@ -146,7 +142,7 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 
 	auto mqttTopicValidator = [&]() {
 		const auto topic = mqttSingleton.get_topic().data();
-		const auto isValid = MqttLib::instance().isValidTopicNameForSubscription(topic);
+		const auto isValid = MqttManager::instance().isValidTopicNameForSubscription(topic);
 		mqttSingleton.set_is_topic_valid(isValid);
 	};
 	mqttSingleton.on_user_edited_topic(mqttTopicValidator);
@@ -197,11 +193,11 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 	};
 	std::ignore = mqttClient.subscriptions.valueChanged().connect(onMqttSubscriptionsChanged);
 
-	auto onMqttMessageReceived = [&](const mosquitto_message *message) {
+	auto onMqttMessageReceived = [&](const MqttClient::Message &message) {
 		const auto timestamp = std::time(nullptr);
 		const auto timestring = std::string(std::asctime(std::localtime(&timestamp)));
-		const auto topic = std::string(message->topic);
-		const auto payload = std::string(static_cast<char*>(message->payload));
+		const auto topic = message.topic;
+		const auto payload = message.payload.toStdString();
 		mqttSingleton.set_message(slint::SharedString(timestring.substr(0, timestring.size()-1) + " - " + topic + " - " + payload));
 	};
 	std::ignore = mqttClient.msgReceived.connect(onMqttMessageReceived);
@@ -209,7 +205,7 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 	auto connectToMqttBroker = [&]() {
 		const auto setLastWill = mqttSingleton.get_set_last_will_on_connect();
 		const std::string lastWillTopic = mqttSingleton.get_last_will_topic().data();
-		const std::string lastWillPayload = mqttSingleton.get_last_will_payload().data();
+		const auto lastWillPayload = ByteArray(mqttSingleton.get_last_will_payload().data(), mqttSingleton.get_last_will_payload().size());
 
 		const auto setTls = mqttSingleton.get_set_ca_file_path_on_connect();
 		const std::string tlsCaFilePath = mqttSingleton.get_ca_file_path().data();
@@ -222,11 +218,11 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 		const auto port = mqttSingleton.get_port();
 
 		if (setLastWill)
-			mqttClient.setWill(lastWillTopic, lastWillPayload.size(), &lastWillPayload);
+			mqttClient.setWill(lastWillTopic, &lastWillPayload);
 		if (setTls)
 			mqttClient.setTls(tlsCaFilePath);
 		mqttClient.setUsernameAndPassword(username, password);
-		mqttClient.connect(url, port, 10);
+		mqttClient.connect(url, port);
 	};
 	mqttSingleton.on_request_mqtt_connect(connectToMqttBroker);
 
@@ -248,8 +244,8 @@ void ApplicationEngine::InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttCl
 
 	auto publishMqttMessage = [&]() {
 		const auto topic = mqttSingleton.get_topic().data();
-		const std::string payload = mqttSingleton.get_payload().data();
-		mqttClient.publish(NULL, topic, payload.length(), payload.c_str());
+		const auto payload = ByteArray(mqttSingleton.get_payload().data(), mqttSingleton.get_payload().size());
+		mqttClient.publish(NULL, topic, &payload);
 	};
 	mqttSingleton.on_request_mqtt_publish(publishMqttMessage);
 }

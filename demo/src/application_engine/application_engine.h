@@ -1,8 +1,8 @@
 #pragma once
 
 #include "app_window.h"
-#ifdef MOSQUITTO_AVAILABLE
-#include "mqtt.h"
+#ifdef MQTT_AVAILABLE
+#include <KDMqtt/mqtt.h>
 #endif
 #ifdef CURL_AVAILABLE
 #include "network_access_manager.h"
@@ -15,7 +15,7 @@ class ApplicationEngine
 
   private:
 	ApplicationEngine(const slint::ComponentHandle<AppWindow> &appWindow);
-	~ApplicationEngine();
+	~ApplicationEngine() = default;
 
 	ApplicationEngine(const ApplicationEngine&) = delete;
 	ApplicationEngine &operator=(const ApplicationEngine&) = delete;
@@ -29,7 +29,7 @@ class ApplicationEngine
 	static void InitHttpDemo(const HttpSingleton &httpSingleton, const INetworkAccessManager &networkAccessManager);
 	static void InitFtpDemo(const FtpSingleton &ftpSingleton, const INetworkAccessManager &networkAccessManager);
 #endif
-#ifdef MOSQUITTO_AVAILABLE
-	static void InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttClient &mqttClient);
+#ifdef MQTT_AVAILABLE
+	static void InitMqttDemo(const MqttSingleton &mqttSingleton, KDMqtt::IMqttClient &mqttClient);
 #endif
 };

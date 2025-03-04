@@ -17,7 +17,7 @@ This starter pack helps you to get started developing a C++ application with KDU
 The starter pack comes with the following integrations that are all hooked into KDFoundations' event loop and come with neat APIs using KDBindings providing properties, signals and slots:
 
 * curl integration
-* mosquito integration
+* mosquitto integration (via KDUtils)
 
 ## Prerequisites
 
@@ -40,7 +40,7 @@ Some packages are needed on Linux to compile mecaps and its dependencies. On Deb
 are:
 
 ```
-sudo apt install build-essential cmake git libxkbcommon-dev libxcb-xkb-dev libxkbcommon-x11-dev wayland-scanner++ wayland-protocols libwayland-dev libmosquittopp-dev
+sudo apt install build-essential cmake git libxkbcommon-dev libxcb-xkb-dev libxkbcommon-x11-dev wayland-scanner++ wayland-protocols libwayland-dev libmosquitto-dev
 ```
 
 ## Usage

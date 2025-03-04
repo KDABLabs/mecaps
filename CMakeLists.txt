@@ -12,7 +12,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(BUILD_DEMO_UI "Build Demo UI" ON)
 option(BUILD_INTEGRATION_CURL "Build Curl Integration" ON)
 option(BUILD_INTEGRATION_KDGUI_SLINT "Build KDGui/Slint Integration" ON)
-option(BUILD_INTEGRATION_MQTT "Build MQTT Integration" ON) # this will be overriden in dependencies.cmake for now
 option(BUILD_TESTS "Build Tests" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/ECM/find-modules")
@@ -33,10 +32,6 @@ endif()
 
 if (BUILD_INTEGRATION_KDGUI_SLINT)
     add_subdirectory(src/kdgui_slint_integration)
-endif()
-
-if (BUILD_INTEGRATION_MQTT)
-    add_subdirectory(src/mqtt)
 endif()
 
 if (BUILD_DEMO_UI AND BUILD_INTEGRATION_KDGUI_SLINT)

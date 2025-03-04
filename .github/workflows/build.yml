@@ -40,7 +40,7 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt install -y \
-          libinput10 libmosquittopp-dev \
+          libinput10 libmosquitto-dev \
           libwayland-dev wayland-scanner++ wayland-protocols \
           libxkbcommon-dev libxkbcommon-x11-dev libxcb-xkb-dev xvfb \
           qt6-base-dev

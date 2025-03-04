@@ -12,7 +12,7 @@ RUN apt-get update --quiet && \
     wget \
     # mecaps / kdutils specific pkgs
     libcurlpp-dev \
-    libmosquittopp-dev \
+    libmosquitto-dev \
     libwayland-dev \
     wayland-scanner++ \
     wayland-protocols \
