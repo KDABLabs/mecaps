@@ -7,10 +7,12 @@ if (NOT TARGET CURL::libcurl)
     FetchContent_Declare(
         curl
         GIT_REPOSITORY https://github.com/curl/curl.git
-        GIT_TAG curl-8_9_0
+        GIT_TAG curl-8_12_1
     )
     set(BUILD_TESTING OFF CACHE BOOL "Turn off testing" FORCE)
     set(BUILD_CURL_EXE OFF CACHE BOOL "Turn off curl executable" FORCE)
+
+    set(CURL_USE_LIBPSL OFF CACHE BOOL "Don't use libpsl to build libcurl" FORCE)
 
     if (WIN32)
         set(CURL_USE_SCHANNEL ON CACHE BOOL "Use schannel to build libcurl" FORCE)
