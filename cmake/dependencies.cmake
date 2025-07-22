@@ -23,7 +23,11 @@ include(FetchContent)
 include(cmake/dependencies/kdutils.cmake)
 
 if (BUILD_INTEGRATION_CURL)
+    # Ignore BUILD_SHARED_LIBS and build libcurl as shared library
+    set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
+    set(BUILD_SHARED_LIBS ON)
     include(cmake/dependencies/curl.cmake)
+    set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD})
 endif()
 
 if (BUILD_INTEGRATION_MQTT)
