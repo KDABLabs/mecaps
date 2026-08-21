@@ -56,7 +56,7 @@ if (BUILD_INTEGRATION_MQTT)
     add_subdirectory(src/mqtt)
 endif()
 
-if (BUILD_INTEGRATION_PDF)
+if (BUILD_INTEGRATION_PDF OR BUILD_TESTS)
     add_subdirectory(src/pdf)
 endif()
 
