@@ -13,12 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
-          #- ubuntu-20.04
-          - windows-2022
-          #- windows-2019
-          #- macos-12
-          #- macos-11
+          - ubuntu-24.04
+          - windows-2025
         build_type:
           - Debug
           - Release
@@ -82,7 +78,12 @@ jobs:
         run: ctest --test-dir ./build -C ${{ matrix.build_type }} --output-on-failure
 
       - name: Read tests log when it fails
-        uses: andstor/file-reader-action@v1
         if: ${{ failure() && matrix.build_type == 'Debug' }}
-        with:
-          path: "./build/Testing/Temporary/LastTest.log"
+        shell: pwsh
+        run: |
+          $log = "./build/Testing/Temporary/LastTest.log"
+          if (Test-Path $log) {
+            Get-Content $log
+          } else {
+            Write-Output "No test log was produced; the failure occurred before tests ran."
+          }

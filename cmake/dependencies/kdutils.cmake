@@ -4,6 +4,7 @@ if(NOT KDUtils_FOUND)
     set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "Build spdlog tests" FORCE)
     set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "Build spdlog examples" FORCE)
     set(SPDLOG_INSTALL ON CACHE BOOL "Generate the spdlog package config" FORCE)
+    set(SPDLOG_BUILD_PIC ON CACHE BOOL "Build position independent code" FORCE)
     FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog.git

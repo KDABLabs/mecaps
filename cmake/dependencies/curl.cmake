@@ -11,6 +11,8 @@ if (NOT TARGET CURL::libcurl)
     )
     set(BUILD_TESTING OFF CACHE BOOL "Turn off testing" FORCE)
     set(BUILD_CURL_EXE OFF CACHE BOOL "Turn off curl executable" FORCE)
+    set(CURL_USE_LIBPSL OFF CACHE BOOL "Disable libpsl support" FORCE)
+    set(USE_LIBIDN2 OFF CACHE BOOL "Disable libidn2 support" FORCE)
 
     if (WIN32)
         set(CURL_USE_SCHANNEL ON CACHE BOOL "Use schannel to build libcurl" FORCE)
