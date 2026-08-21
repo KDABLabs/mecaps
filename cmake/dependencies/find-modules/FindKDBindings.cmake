@@ -1,0 +1,5 @@
+if(TARGET KDAB::KDBindings)
+    set(KDBindings_FOUND TRUE)
+else()
+    set(KDBindings_FOUND FALSE)
+endif()

@@ -1,0 +1,5 @@
+if(TARGET spdlog::spdlog)
+    set(spdlog_FOUND TRUE)
+else()
+    set(spdlog_FOUND FALSE)
+endif()
