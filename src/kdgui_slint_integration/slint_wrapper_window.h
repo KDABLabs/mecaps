@@ -1,5 +1,5 @@
 #pragma once
-#include <slint_string.h>
+#include <slint.h>
 #include <KDGui/gui_events.h>
 #include <KDGui/kdgui_keys.h>
 #include <KDGui/window.h>

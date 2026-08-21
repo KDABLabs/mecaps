@@ -1,4 +1,5 @@
-find_package(Slint QUIET)
+set(SLINT_STYLE fluent CACHE STRING "The Slint widget style")
+find_package(Slint 1.17.1 QUIET)
 
 if(NOT Slint_FOUND)
   message(
@@ -13,8 +14,6 @@ if(NOT Slint_FOUND)
   FetchContent_Declare(
     Slint
     GIT_REPOSITORY https://github.com/slint-ui/slint.git
-    # `release/1` will auto-upgrade to the latest Slint >= 1.0.0 and < 2.0.0
-    # `release/1.0` will auto-upgrade to the latest Slint >= 1.0.0 and < 1.1.0
     GIT_TAG v1.17.1
     SOURCE_SUBDIR api/cpp)
   FetchContent_MakeAvailable(Slint)

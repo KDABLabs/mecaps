@@ -10,6 +10,11 @@ export { CounterSingleton, FtpSingleton, HttpSingleton, MqttSingleton }
 export global AppSingleton {
     in property<bool> curl-available: true;
     in property<bool> mosquitto-available: true;
+    in property<[string]> menu-items: [];
+    out property<string> counter-menu-item: @tr("Menu" => "Counter");
+    out property<string> http-menu-item: @tr("Menu" => "HTTP");
+    out property<string> ftp-menu-item: @tr("Menu" => "FTP");
+    out property<string> mqtt-menu-item: @tr("Menu" => "MQTT");
 }
 
 export component AppWindow inherits Window {
@@ -22,15 +27,7 @@ export component AppWindow inherits Window {
         title: @tr("mecaps demo");
         width: 200px;
         x: 0;
-        model: AppSingleton.curl-available ?
-            ( AppSingleton.mosquitto-available ?
-                [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP"), @tr("Menu" => "MQTT")] :
-                [@tr("Menu" => "Counter"), @tr("Menu" => "HTTP"), @tr("Menu" => "FTP")]
-            ) :
-            ( AppSingleton.mosquitto-available ?
-                [@tr("Menu" => "Counter"), @tr("Menu" => "MQTT")] :
-                [@tr("Menu" => "Counter")]
-            );
+        model: AppSingleton.menu-items;
     }
 
     counter-page := CounterPage {

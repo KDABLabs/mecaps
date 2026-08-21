@@ -1,4 +1,4 @@
-#include <slint_size.h>
+#include <slint.h>
 #include <KDGui/gui_application.h>
 #include <KDGui/window.h>
 

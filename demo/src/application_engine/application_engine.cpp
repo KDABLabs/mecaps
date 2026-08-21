@@ -37,6 +37,17 @@ ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &ap
 	appSingleton.set_mosquitto_available(false);
 #endif
 
+	auto menuItems = std::make_shared<slint::VectorModel<slint::SharedString>>();
+	menuItems->push_back(appSingleton.get_counter_menu_item());
+#ifdef CURL_AVAILABLE
+	menuItems->push_back(appSingleton.get_http_menu_item());
+	menuItems->push_back(appSingleton.get_ftp_menu_item());
+#endif
+#ifdef MOSQUITTO_AVAILABLE
+	menuItems->push_back(appSingleton.get_mqtt_menu_item());
+#endif
+	appSingleton.set_menu_items(menuItems);
+
 }
 
 ApplicationEngine::~ApplicationEngine()
