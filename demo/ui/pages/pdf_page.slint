@@ -8,15 +8,45 @@ export global PdfSingleton {
     in property<int> page-count: 0;
     in property<bool> loading: false;
     in property<string> error-message: "";
+    in property<float> image-x: 0;
+    in property<float> image-y: 0;
+    in property<float> image-width: 0;
+    in property<float> image-height: 0;
+    in property<float> pan-min-x: 0;
+    in property<float> pan-max-x: 0;
+    in property<float> pan-min-y: 0;
+    in property<float> pan-max-y: 0;
+    in-out property<float> viewport-width: 0;
+    in-out property<float> viewport-height: 0;
+    in-out property<float> display-scale: 1;
+    in property<int> zoom-percent: 100;
 
     callback request-open(string);
     callback request-previous();
     callback request-next();
+    callback viewport-changed(float, float, float);
+    callback request-fit-page();
+    callback request-fit-width();
+    callback request-zoom-in(float, float);
+    callback request-zoom-out(float, float);
+    callback request-pan(float, float, bool);
 }
 
 export component PdfPage inherits Page {
     title: @tr("PDF");
     description: @tr("asynchronous single-page viewer");
+
+    function open-document(path: string) {
+        PdfSingleton.viewport-width = viewer.width / 1px;
+        PdfSingleton.viewport-height = viewer.height / 1px;
+        PdfSingleton.display-scale = 1px / 1phx;
+        PdfSingleton.viewport-changed(
+            PdfSingleton.viewport-width,
+            PdfSingleton.viewport-height,
+            PdfSingleton.display-scale
+        );
+        PdfSingleton.request-open(path);
+    }
 
     VerticalBox {
         HorizontalBox {
@@ -25,26 +55,95 @@ export component PdfPage inherits Page {
             LineEdit {
                 text <=> PdfSingleton.document-path;
                 placeholder-text: @tr("Path to a PDF document");
-                accepted => { PdfSingleton.request-open(self.text); }
+                accepted => { root.open-document(self.text); }
             }
 
             Button {
                 text: @tr("Open");
                 enabled: !PdfSingleton.loading && PdfSingleton.document-path != "";
-                clicked => { PdfSingleton.request-open(PdfSingleton.document-path); }
+                clicked => { root.open-document(PdfSingleton.document-path); }
             }
         }
 
-        Rectangle {
+        viewer := Rectangle {
             background: #404040;
             clip: true;
             vertical-stretch: 1;
 
+            private property<float> logical-width: self.width / 1px;
+            private property<float> logical-height: self.height / 1px;
+            private property<float> pixel-scale: 1px / 1phx;
+
+            changed logical-width => {
+                PdfSingleton.viewport-width = self.logical-width;
+                PdfSingleton.display-scale = self.pixel-scale;
+                PdfSingleton.viewport-changed(self.logical-width, self.logical-height, self.pixel-scale);
+            }
+
+            changed logical-height => {
+                PdfSingleton.viewport-height = self.logical-height;
+                PdfSingleton.display-scale = self.pixel-scale;
+                PdfSingleton.viewport-changed(self.logical-width, self.logical-height, self.pixel-scale);
+            }
+
             Image {
                 source: PdfSingleton.page-image;
-                width: 100%;
-                height: 100%;
-                image-fit: contain;
+                x: PdfSingleton.image-x * 1px + input.drag-x;
+                y: PdfSingleton.image-y * 1px + input.drag-y;
+                width: PdfSingleton.image-width * 1px;
+                height: PdfSingleton.image-height * 1px;
+                image-fit: fill;
+            }
+
+            input := TouchArea {
+                property<bool> dragging: false;
+                property<length> committed-x: 0px;
+                property<length> committed-y: 0px;
+                property<length> drag-x: self.dragging
+                    ? Math.clamp(
+                        self.mouse-x - self.pressed-x - self.committed-x,
+                        PdfSingleton.pan-min-x * 1px,
+                        PdfSingleton.pan-max-x * 1px
+                    ) : 0px;
+                property<length> drag-y: self.dragging
+                    ? Math.clamp(
+                        self.mouse-y - self.pressed-y - self.committed-y,
+                        PdfSingleton.pan-min-y * 1px,
+                        PdfSingleton.pan-max-y * 1px
+                    ) : 0px;
+
+                function commit-pan() {
+                    let delta-x = self.drag-x;
+                    let delta-y = self.drag-y;
+                    if (delta-x != 0px || delta-y != 0px) {
+                        PdfSingleton.request-pan(delta-x / 1px, delta-y / 1px, true);
+                        self.committed-x += delta-x;
+                        self.committed-y += delta-y;
+                    }
+                }
+
+                pointer-event(event) => {
+                    if (event.kind == PointerEventKind.down && event.button == PointerEventButton.left) {
+                        self.committed-x = 0px;
+                        self.committed-y = 0px;
+                        self.dragging = true;
+                    } else if ((event.kind == PointerEventKind.up && event.button == PointerEventButton.left)
+                            || event.kind == PointerEventKind.cancel) {
+                        self.commit-pan();
+                        self.dragging = false;
+                    }
+                }
+
+                scroll-event(event) => {
+                    PdfSingleton.request-pan(event.delta-x / 1px, event.delta-y / 1px, false);
+                    return accept;
+                }
+            }
+
+            Timer {
+                interval: 33ms;
+                running: input.dragging;
+                triggered => { input.commit-pan(); }
             }
 
             Text {
@@ -67,6 +166,36 @@ export component PdfPage inherits Page {
 
         HorizontalBox {
             vertical-stretch: 0;
+
+            Button {
+                text: @tr("Fit Page");
+                enabled: PdfSingleton.page-count > 0;
+                clicked => { PdfSingleton.request-fit-page(); }
+            }
+
+            Button {
+                text: @tr("Fit Width");
+                enabled: PdfSingleton.page-count > 0;
+                clicked => { PdfSingleton.request-fit-width(); }
+            }
+
+            Button {
+                text: "-";
+                enabled: PdfSingleton.page-count > 0;
+                clicked => { PdfSingleton.request-zoom-out(viewer.width / 2 / 1px, viewer.height / 2 / 1px); }
+            }
+
+            Text {
+                text: PdfSingleton.zoom-percent + "%";
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Button {
+                text: "+";
+                enabled: PdfSingleton.page-count > 0;
+                clicked => { PdfSingleton.request-zoom-in(viewer.width / 2 / 1px, viewer.height / 2 / 1px); }
+            }
 
             Button {
                 text: @tr("Previous");

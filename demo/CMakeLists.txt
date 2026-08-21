@@ -19,7 +19,7 @@ endif()
 if(BUILD_INTEGRATION_PDF)
     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/src/pdf/fixtures/two_colors.pdf"
+        "${CMAKE_SOURCE_DIR}/src/pdf/fixtures/demo_letter.pdf"
         $<TARGET_FILE_DIR:${TARGET_NAME}>
     )
 endif()

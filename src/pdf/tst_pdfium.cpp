@@ -11,15 +11,16 @@
 #include <iterator>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
 
 using namespace mecaps::pdf;
 
-std::string loadFixture()
+std::string loadFixture(std::string_view name = "two_colors.pdf")
 {
-	std::ifstream input(PDF_TEST_FIXTURE_DIR "/two_colors.pdf", std::ios::binary);
+	std::ifstream input(std::string(PDF_TEST_FIXTURE_DIR) + "/" + std::string(name), std::ios::binary);
 	return { std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>() };
 }
 
@@ -60,6 +61,28 @@ TEST_SUITE("PDFium backend")
 		CHECK(metadata.value.widthPoints == doctest::Approx(20.0));
 		CHECK(metadata.value.heightPoints == doctest::Approx(10.0));
 		CHECK(result.value->pageMetadata(1).error == DocumentError::pageOutOfBounds);
+	}
+
+	TEST_CASE("opens and renders the two-page A4 demo document")
+	{
+		auto backend = createPdfiumBackend();
+		const auto fixture = loadFixture("demo_letter.pdf");
+		REQUIRE(fixture.starts_with("%PDF-1.4"));
+		auto result = backend->open(std::as_bytes(std::span(fixture)));
+		REQUIRE(result);
+		REQUIRE(result.value->pageCount() == 2);
+
+		for (std::size_t pageIndex = 0; pageIndex < result.value->pageCount(); ++pageIndex) {
+			const auto metadata = result.value->pageMetadata(pageIndex);
+			REQUIRE(metadata);
+			CHECK(metadata.value.widthPoints == doctest::Approx(595.0));
+			CHECK(metadata.value.heightPoints == doctest::Approx(842.0));
+
+			std::array<std::byte, 60 * 85 * 3> pixels {};
+			const RenderRequest request { pageIndex, { 0.0, 0.0, 595.0, 842.0 }, 60, 85 };
+			const PixelBuffer buffer { pixels, 60, 85, 180, PixelFormat::rgb8 };
+			CHECK(result.value->render(request, buffer));
+		}
 	}
 
 	TEST_CASE("renders and converts PDFium BGR output to RGB")

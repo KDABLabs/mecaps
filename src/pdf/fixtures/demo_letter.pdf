@@ -1,0 +1,103 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /PageLayout /SinglePage >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 7 0 R /F2 8 0 R >> >> /Contents 6 0 R >>
+endobj
+5 0 obj
+<< /Length 0000001108 >>
+stream
+0.055 0.063 0.071 rg 0 0 595 842 re f
+0.11 0.125 0.14 rg 28 28 539 786 re f
+0.04 0.045 0.05 rg 28 786 539 28 re f
+0.95 0.32 0.25 rg 48 797 7 7 re f
+0.98 0.72 0.22 rg 64 797 7 7 re f
+0.30 0.78 0.49 rg 80 797 7 7 re f
+0.30 0.78 0.49 RG 1 w 28 28 539 786 re S
+BT
+/F1 9 Tf 0.55 0.62 0.66 rg 470 795 Td (mecaps@kdab:~) Tj
+/F2 15 Tf 0.30 0.78 0.49 rg -422 -70 Td (KDAB / MECAPS) Tj
+/F2 30 Tf 0.93 0.95 0.96 rg 0 -54 Td (MODERN EMBEDDED) Tj
+0 -38 Td (C++ APPLICATION) Tj
+0 -38 Td (STARTER) Tj
+/F1 12 Tf 0.30 0.78 0.49 rg 0 -58 Td ($ ./mecaps_demo_ui) Tj
+/F1 12 Tf 0.78 0.83 0.86 rg 0 -34 Td ([core] KDUtils cross-platform application core) Tj
+0 -24 Td ([ui]   Slint user interface) Tj
+0 -24 Td ([build] CMake and C++20) Tj
+0 -24 Td ([loop]  KDFoundation event integration) Tj
+0 -24 Td ([api]   KDBindings properties, signals and slots) Tj
+/F1 10 Tf 0.55 0.62 0.66 rg 0 -76 Td (A practical starting point for embedded and desktop software.) Tj
+0 -18 Td (Qt-free application structure. Clear integration boundaries.) Tj
+0 -18 Td (Built and maintained by KDAB.) Tj
+/F2 10 Tf 0.30 0.78 0.49 rg 0 -64 Td (> READY_) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 0000001647 >>
+stream
+0.055 0.063 0.071 rg 0 0 595 842 re f
+0.11 0.125 0.14 rg 28 28 539 786 re f
+0.04 0.045 0.05 rg 28 786 539 28 re f
+0.95 0.32 0.25 rg 48 797 7 7 re f
+0.98 0.72 0.22 rg 64 797 7 7 re f
+0.30 0.78 0.49 rg 80 797 7 7 re f
+0.30 0.78 0.49 RG 1 w 28 28 539 786 re S
+BT
+/F1 9 Tf 0.55 0.62 0.66 rg 470 795 Td (mecaps@kdab:~) Tj
+/F2 18 Tf 0.30 0.78 0.49 rg -422 -62 Td (MECAPS / ABOUT) Tj
+/F1 11 Tf 0.78 0.83 0.86 rg 0 -45 Td ($ cat README.md) Tj
+/F2 11 Tf 0.93 0.95 0.96 rg 0 -38 Td (PURPOSE) Tj
+/F1 10 Tf 0.78 0.83 0.86 rg 0 -22 Td (MECAPS is a starter template for modern C++ applications.) Tj
+0 -18 Td (It provides a small, practical foundation for embedded and) Tj
+0 -18 Td (desktop projects without imposing a second UI framework.) Tj
+/F2 11 Tf 0.93 0.95 0.96 rg 0 -38 Td (FOUNDATION) Tj
+/F1 10 Tf 0.78 0.83 0.86 rg 0 -22 Td (- KDUtils supplies the cross-platform application core.) Tj
+0 -18 Td (- Slint supplies the declarative user interface.) Tj
+0 -18 Td (- CMake organizes configuration and builds.) Tj
+0 -18 Td (- C++20 is the project language baseline.) Tj
+/F2 11 Tf 0.93 0.95 0.96 rg 0 -38 Td (INTEGRATION) Tj
+/F1 10 Tf 0.78 0.83 0.86 rg 0 -22 Td (Components connect through the KDFoundation event loop.) Tj
+0 -18 Td (KDBindings provides properties, signals and slots for) Tj
+0 -18 Td (clean communication between application services and UI.) Tj
+/F2 11 Tf 0.93 0.95 0.96 rg 0 -38 Td (PROJECT) Tj
+/F1 10 Tf 0.78 0.83 0.86 rg 0 -22 Td (Maintained by KDAB and available under your choice of) Tj
+0 -18 Td (the MIT or Apache-2.0 license.) Tj
+0 -30 Td (https://github.com/KDABLabs/mecaps) Tj
+/F2 10 Tf 0.30 0.78 0.49 rg 0 -48 Td (> END OF FILE_) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>
+endobj
+9 0 obj
+<< /Title (MECAPS Demo) /Author (KDAB) /Subject (Modern Embedded C++ Application Starter) >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000082 00000 n 
+0000000145 00000 n 
+0000000281 00000 n 
+0000000417 00000 n 
+0000001583 00000 n 
+0000003288 00000 n 
+0000003356 00000 n 
+0000003429 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R /Info 9 0 R >>
+startxref
+0000003537
+%%EOF

@@ -217,6 +217,24 @@ TEST_SUITE("PDF controller")
 		CHECK(published == std::vector<GenerationId> { 2 });
 	}
 
+	TEST_CASE("generation replacement suppresses a result before delayed work is submitted")
+	{
+		auto state = std::make_shared<FakeState>();
+		TestDispatcher dispatcher;
+		Controller controller(std::make_unique<FakeBackend>(state), dispatcher.dispatcher());
+		controller.open(1, { std::byte { 1 } }, [](OpenResult) {});
+		dispatcher.drain();
+
+		bool published = false;
+		controller.render(2, request(), PixelFormat::rgba8, [&](RenderResult) { published = true; });
+		while (dispatcher.pending() == 0)
+			std::this_thread::yield();
+		controller.replaceGeneration(3);
+		dispatcher.drain();
+
+		CHECK_FALSE(published);
+	}
+
 	TEST_CASE("queued completion cannot run after shutdown")
 	{
 		auto state = std::make_shared<FakeState>();

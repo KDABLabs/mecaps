@@ -18,7 +18,7 @@ struct ControllerLimits {
 	std::size_t maxPageCount { 10'000U };
 	double maxPageWidthPoints { 20'000.0 };
 	double maxPageHeightPoints { 20'000.0 };
-	std::size_t maxOutputPixels { 16U * 1024U * 1024U };
+	std::size_t maxOutputPixels { defaultMaxOutputPixels };
 	std::size_t maxInFlightRequests { 16U };
 };
 
@@ -66,6 +66,7 @@ class Controller
 	        RenderRequest request,
 	        PixelFormat format,
 	        RenderCallback callback);
+	void replaceGeneration(GenerationId generation);
 
   private:
 	class Impl;

@@ -136,6 +136,13 @@ class Controller::Impl
 		});
 	}
 
+	void replaceGeneration(GenerationId generation)
+	{
+		const std::scoped_lock lock(m_mutex);
+		if (!m_stopping)
+			advanceGenerationLocked(generation);
+	}
+
   private:
 	struct PublicationState {
 		std::atomic_bool alive { true };
@@ -277,6 +284,11 @@ void Controller::render(
         RenderCallback callback)
 {
 	m_impl->render(generation, request, format, std::move(callback));
+}
+
+void Controller::replaceGeneration(GenerationId generation)
+{
+	m_impl->replaceGeneration(generation);
 }
 
 } // namespace mecaps::pdf

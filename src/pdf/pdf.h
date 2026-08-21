@@ -9,6 +9,8 @@
 
 namespace mecaps::pdf {
 
+inline constexpr std::size_t defaultMaxOutputPixels = 16U * 1024U * 1024U;
+
 enum class DocumentError {
 	none,
 	invalidDocument,

@@ -3,6 +3,7 @@
 #include <KDUtils/dir.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <fstream>
@@ -14,8 +15,8 @@
 namespace {
 
 constexpr std::size_t maxDocumentBytes = 64U * 1024U * 1024U;
-constexpr std::uint32_t maxRenderWidth = 1200;
-constexpr std::uint32_t maxRenderHeight = 1600;
+constexpr auto sharpRenderDelay = std::chrono::milliseconds(100);
+constexpr double zoomStep = 1.25;
 
 void reportFileDispatchFailure(mecaps::pdf::DocumentError error) noexcept
 {
@@ -53,7 +54,7 @@ PdfDemo::PdfDemo(const PdfSingleton &ui, std::unique_ptr<mecaps::pdf::Backend> b
 	      }))
 	, m_fileWorker([this] { runFileWorker(); })
 {
-	const auto documentPath = KDUtils::Dir::applicationDir().absoluteFilePath("two_colors.pdf");
+	const auto documentPath = KDUtils::Dir::applicationDir().absoluteFilePath("demo_letter.pdf");
 	m_ui.set_document_path(slint::SharedString(documentPath));
 	m_ui.on_request_open([this](const slint::SharedString &path) { open(path); });
 	m_ui.on_request_previous([this] {
@@ -64,6 +65,17 @@ PdfDemo::PdfDemo(const PdfSingleton &ui, std::unique_ptr<mecaps::pdf::Backend> b
 		if (m_pageIndex + 1 < m_pageCount)
 			showPage(m_pageIndex + 1);
 	});
+	m_ui.on_viewport_changed([this](float width, float height, float displayScale) {
+		viewportChanged(width, height, displayScale);
+	});
+	m_ui.on_request_fit_page([this] { setFitMode(mecaps::pdf::FitMode::page); });
+	m_ui.on_request_fit_width([this] { setFitMode(mecaps::pdf::FitMode::width); });
+	m_ui.on_request_zoom_in([this](float x, float y) { zoomBy(zoomStep, x, y); });
+	m_ui.on_request_zoom_out([this](float x, float y) { zoomBy(1.0 / zoomStep, x, y); });
+	m_ui.on_request_pan([this](float deltaX, float deltaY, bool immediate) {
+		panBy(deltaX, deltaY, immediate);
+	});
+	viewportChanged(m_ui.get_viewport_width(), m_ui.get_viewport_height(), m_ui.get_display_scale());
 }
 
 PdfDemo::~PdfDemo()
@@ -77,6 +89,7 @@ PdfDemo::~PdfDemo()
 	m_ui.on_request_zoom_in([](float, float) {});
 	m_ui.on_request_zoom_out([](float, float) {});
 	m_ui.on_request_pan([](float, float, bool) {});
+	m_renderTimer.stop();
 	m_publication->alive.store(false, std::memory_order_release);
 	{
 		const std::scoped_lock lock(m_fileMutex);
@@ -98,6 +111,8 @@ void PdfDemo::open(const slint::SharedString &path)
 	m_ui.set_page_number(0);
 	m_ui.set_page_count(0);
 	m_pageCount = 0;
+	m_hasPage = false;
+	m_renderedClip.reset();
 	m_controller->open(generation, {}, [](mecaps::pdf::OpenResult) {});
 
 	{
@@ -148,7 +163,6 @@ void PdfDemo::runFileWorker()
 			data.clear();
 			error = errorMessage(mecaps::pdf::DocumentError::backendFailure);
 		}
-
 		const std::weak_ptr<PublicationState> weakPublication = m_publication;
 		try {
 			slint::invoke_from_event_loop(
@@ -197,26 +211,81 @@ void PdfDemo::showPage(std::size_t pageIndex)
 		return;
 
 	const auto generation = ++m_generation;
+	m_controller->replaceGeneration(generation);
 	m_ui.set_loading(true);
 	m_ui.set_error_message("");
+	m_ui.set_page_image({});
+	m_renderedClip.reset();
+	m_hasPage = false;
 	m_controller->pageMetadata(generation, pageIndex, [this](mecaps::pdf::PageMetadataResult result) {
 		if (result.error != mecaps::pdf::DocumentError::none) {
 			publishError(result.error);
 			return;
 		}
 
-		const auto scale = std::min(
-		        static_cast<double>(maxRenderWidth) / result.metadata.widthPoints,
-		        static_cast<double>(maxRenderHeight) / result.metadata.heightPoints);
-		const auto width = static_cast<std::uint32_t>(std::max(1.0, std::round(result.metadata.widthPoints * scale)));
-		const auto height = static_cast<std::uint32_t>(std::max(1.0, std::round(result.metadata.heightPoints * scale)));
-		mecaps::pdf::RenderRequest request {
-			result.pageIndex,
-			{ 0, 0, result.metadata.widthPoints, result.metadata.heightPoints },
-			width,
-			height,
-		};
-		m_controller->render(result.generation, request, mecaps::pdf::PixelFormat::rgb8,
+		m_pageIndex = result.pageIndex;
+		m_viewport.setViewport(
+		        m_ui.get_viewport_width(), m_ui.get_viewport_height(), m_ui.get_display_scale());
+		m_viewport.setPage(result.pageIndex, result.metadata);
+		m_hasPage = true;
+		scheduleRender(true);
+	});
+}
+
+void PdfDemo::viewportChanged(double width, double height, double displayScale)
+{
+	m_viewport.setViewport(width, height, displayScale);
+	if (m_hasPage)
+		scheduleRender(!m_renderedClip.has_value());
+}
+
+void PdfDemo::setFitMode(mecaps::pdf::FitMode mode)
+{
+	if (!m_hasPage)
+		return;
+	m_viewport.setFitMode(mode);
+	scheduleRender();
+}
+
+void PdfDemo::zoomBy(double factor, double anchorX, double anchorY)
+{
+	if (!m_hasPage)
+		return;
+	m_viewport.zoomBy(factor, { anchorX, anchorY });
+	scheduleRender();
+}
+
+void PdfDemo::panBy(double deltaX, double deltaY, bool immediate)
+{
+	if (!m_hasPage)
+		return;
+	if (!m_viewport.panBy(deltaX, deltaY))
+		return;
+	scheduleRender(immediate);
+}
+
+void PdfDemo::scheduleRender(bool immediate)
+{
+	const auto generation = ++m_generation;
+	m_controller->replaceGeneration(generation);
+	updatePreview();
+	m_ui.set_zoom_percent(static_cast<int>(std::round(m_viewport.scale() * 100.0)));
+	m_renderTimer.stop();
+	if (immediate) {
+		renderViewport(generation);
+	} else {
+		m_renderTimer.start(slint::TimerMode::SingleShot, sharpRenderDelay,
+		        [this, generation] { renderViewport(generation); });
+	}
+}
+
+void PdfDemo::renderViewport(mecaps::pdf::GenerationId generation)
+{
+	const auto plan = m_viewport.renderPlan();
+	if (!plan)
+		return;
+
+	m_controller->render(generation, plan->request, mecaps::pdf::PixelFormat::rgb8,
 		        [this](mecaps::pdf::RenderResult render) {
 			        if (render.error != mecaps::pdf::DocumentError::none) {
 				        publishError(render.error);
@@ -233,12 +302,30 @@ void PdfDemo::showPage(std::size_t pageIndex)
 				        return;
 			        }
 			        std::memcpy(pixels.begin(), render.pixels.data(), destinationBytes);
-			        m_pageIndex = render.request.pageIndex;
+			        m_renderedClip = render.request.clip;
 			        m_ui.set_page_image(slint::Image(std::move(pixels)));
+			        updatePreview();
 			        m_ui.set_page_number(static_cast<int>(m_pageIndex + 1));
 			        m_ui.set_loading(false);
 		        });
-	});
+}
+
+void PdfDemo::updatePreview()
+{
+	const auto panBounds = m_viewport.panBounds();
+	m_ui.set_pan_min_x(static_cast<float>(panBounds.minimumX));
+	m_ui.set_pan_max_x(static_cast<float>(panBounds.maximumX));
+	m_ui.set_pan_min_y(static_cast<float>(panBounds.minimumY));
+	m_ui.set_pan_max_y(static_cast<float>(panBounds.maximumY));
+	if (!m_renderedClip)
+		return;
+	const auto placement = m_viewport.placementFor(*m_renderedClip);
+	if (!placement)
+		return;
+	m_ui.set_image_x(static_cast<float>(placement->x));
+	m_ui.set_image_y(static_cast<float>(placement->y));
+	m_ui.set_image_width(static_cast<float>(placement->width));
+	m_ui.set_image_height(static_cast<float>(placement->height));
 }
 
 void PdfDemo::publishError(mecaps::pdf::DocumentError error)
