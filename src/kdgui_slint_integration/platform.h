@@ -1,5 +1,6 @@
 #include "window_adapter.h"
 #include <KDGui/gui_application.h>
+#include <KDFoundation/platform/abstract_platform_event_loop.h>
 #include <slint-platform.h>
 #include <thread>
 
@@ -33,6 +34,8 @@ class KDSlintPlatform : public slint_platform::Platform
 						m_needsToQuit = false;
 						break;
 					}
+
+					m_slintStateChanged = false;
 
 					// don't own the event queue so that kdgui event handlers
 					// can submit to it without causing deadlock
@@ -74,9 +77,12 @@ class KDSlintPlatform : public slint_platform::Platform
 
 	inline void quit_event_loop() override
 	{
-		std::unique_lock lock(the_mutex);
-		m_needsToQuit = true;
-		m_slintStateChanged = true;
+		{
+			std::unique_lock lock(the_mutex);
+			m_needsToQuit = true;
+			m_slintStateChanged = true;
+		}
+		KDFoundation::CoreApplication::instance()->platformEventLoop()->wakeUp();
 	}
 
 	inline void run_in_event_loop(slint_platform::Platform::Task event) override
@@ -84,7 +90,7 @@ class KDSlintPlatform : public slint_platform::Platform
 		const std::unique_lock lock(the_mutex);
 		m_events.push_back(std::move(event));
 		m_slintStateChanged = true;
-		KDFoundation::CoreApplication::instance()->eventLoop()->wakeUp();
+		KDFoundation::CoreApplication::instance()->platformEventLoop()->wakeUp();
 	}
 
   protected:
@@ -99,7 +105,7 @@ class KDSlintPlatform : public slint_platform::Platform
 	bool m_needsToQuit = false;
 	std::deque<slint_platform::Platform::Task> m_events;
 
-	std::atomic<bool> m_slintStateChanged;
+	std::atomic<bool> m_slintStateChanged = false;
 
 	std::unique_ptr<KDWindowAdapter> m_windowAdapter;
 };
