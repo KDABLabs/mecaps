@@ -29,6 +29,22 @@ static PointerEventButton kdGuiToPointerEventButton(KDGui::MouseButton button)
 
 std::vector<std::optional<std::array<char, SlintWrapperWindow::s_maxUnicodeCharacterForKey>>> SlintWrapperWindow::s_unicodeForNativeKeyCode(256, std::nullopt);
 
+slint::LogicalSize SlintWrapperWindow::physicalSizeToLogical(uint32_t width, uint32_t height, float scaleFactor)
+{
+	return slint::LogicalSize({
+		.width = static_cast<float>(width) / scaleFactor,
+		.height = static_cast<float>(height) / scaleFactor,
+	});
+}
+
+slint::LogicalPosition SlintWrapperWindow::physicalPositionToLogical(int64_t x, int64_t y, float scaleFactor)
+{
+	return slint::LogicalPosition({
+		.x = static_cast<float>(x) / scaleFactor,
+		.y = static_cast<float>(y) / scaleFactor,
+	});
+}
+
 SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 	: m_adapter(adapter)
 {
@@ -106,10 +122,7 @@ void SlintWrapperWindow::resizeEvent(KDFoundation::ResizeEvent *event)
 
 	const float scale = m_adapter->window().scale_factor();
 
-	slint::LogicalSize windowSizeLogical({
-		.width = static_cast<float>(event->width()) * scale,
-		.height = static_cast<float>(event->height()) * scale,
-	});
+	const auto windowSizeLogical = physicalSizeToLogical(event->width(), event->height(), scale);
 
 	m_adapter->window().dispatch_resize_event(windowSizeLogical);
 
@@ -121,13 +134,10 @@ void SlintWrapperWindow::mousePressEvent(KDGui::MousePressEvent *event)
 	KDGui::Window::mousePressEvent(event);
 	assert(m_adapter->initialized());
 
-	float scale = m_adapter->window().scale_factor();
+	const float scale = m_adapter->window().scale_factor();
 
 	m_adapter->window().dispatch_pointer_press_event(
-		slint::LogicalPosition({
-			.x = static_cast<float>(event->xPos()) * scale,
-			.y = static_cast<float>(event->yPos()) * scale,
-		}),
+		physicalPositionToLogical(event->xPos(), event->yPos(), scale),
 		kdGuiToPointerEventButton(event->button()));
 	event->setAccepted(true);
 }
@@ -141,10 +151,7 @@ void SlintWrapperWindow::mouseReleaseEvent(KDGui::MouseReleaseEvent *event)
 	const float scale = m_adapter->window().scale_factor();
 
 	m_adapter->window().dispatch_pointer_release_event(
-		slint::LogicalPosition({
-			.x = static_cast<float>(event->xPos()) * scale,
-			.y = static_cast<float>(event->yPos()) * scale,
-		}),
+		physicalPositionToLogical(event->xPos(), event->yPos(), scale),
 		kdGuiToPointerEventButton(event->button()));
 	event->setAccepted(true);
 }
@@ -158,10 +165,8 @@ void SlintWrapperWindow::mouseMoveEvent(KDGui::MouseMoveEvent *event)
 
 	const float scale = m_adapter->window().scale_factor();
 
-	m_adapter->window().dispatch_pointer_move_event(slint::LogicalPosition({
-		.x = static_cast<float>(event->xPos()) * scale,
-		.y = static_cast<float>(event->yPos()) * scale,
-	}));
+	m_adapter->window().dispatch_pointer_move_event(
+		physicalPositionToLogical(event->xPos(), event->yPos(), scale));
 
 	event->setAccepted(true);
 }
@@ -175,14 +180,11 @@ void SlintWrapperWindow::mouseWheelEvent(KDGui::MouseWheelEvent *event)
 	const auto &pos = cursorPosition.get();
 	const float scale = m_adapter->window().scale_factor();
 
-	const auto logicalPos = slint::LogicalPosition({
-		.x = static_cast<float>(pos.x) * scale,
-		.y = static_cast<float>(pos.y) * scale,
-	});
+	const auto logicalPos = physicalPositionToLogical(pos.x, pos.y, scale);
 
 	m_adapter->window().dispatch_pointer_scroll_event(
-		logicalPos, static_cast<float>(event->xDelta()) * scale,
-		static_cast<float>(event->yDelta()) * scale);
+		logicalPos, static_cast<float>(event->xDelta()),
+		static_cast<float>(event->yDelta()));
 
 	event->setAccepted(true);
 }

@@ -18,6 +18,12 @@ class SlintWrapperWindowUnitTestHarness
 	static std::optional<slint::SharedString> handleTextInputEvent(std::string_view text, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKeyPressed) {
 		return mecaps::SlintWrapperWindow::handleTextInputEvent(text, lastNativeKeyCodePressed, lastKeyPressed);
 	}
+	static slint::LogicalSize physicalSizeToLogical(uint32_t width, uint32_t height, float scaleFactor) {
+		return mecaps::SlintWrapperWindow::physicalSizeToLogical(width, height, scaleFactor);
+	}
+	static slint::LogicalPosition physicalPositionToLogical(int64_t x, int64_t y, float scaleFactor) {
+		return mecaps::SlintWrapperWindow::physicalPositionToLogical(x, y, scaleFactor);
+	}
 };
 
 }
@@ -164,4 +170,29 @@ TEST_SUITE("KDGuiSlintIntegration")
 			}
 		}
     }
+
+	TEST_CASE("Physical sizes and pointer positions convert to logical units")
+	{
+		SUBCASE("at scale factor 1")
+		{
+			const auto logicalSize = mecaps::SlintWrapperWindowUnitTestHarness::physicalSizeToLogical(800, 600, 1.0f);
+			const auto logicalPosition = mecaps::SlintWrapperWindowUnitTestHarness::physicalPositionToLogical(300, 200, 1.0f);
+
+			CHECK(logicalSize.width == 800.0f);
+			CHECK(logicalSize.height == 600.0f);
+			CHECK(logicalPosition.x == 300.0f);
+			CHECK(logicalPosition.y == 200.0f);
+		}
+
+		SUBCASE("at scale factor 2")
+		{
+			const auto logicalSize = mecaps::SlintWrapperWindowUnitTestHarness::physicalSizeToLogical(800, 600, 2.0f);
+			const auto logicalPosition = mecaps::SlintWrapperWindowUnitTestHarness::physicalPositionToLogical(300, 200, 2.0f);
+
+			CHECK(logicalSize.width == 400.0f);
+			CHECK(logicalSize.height == 300.0f);
+			CHECK(logicalPosition.x == 150.0f);
+			CHECK(logicalPosition.y == 100.0f);
+		}
+	}
 }

@@ -29,6 +29,8 @@ class SlintWrapperWindow : public KDGui::Window
 	void keyPressEvent(KDGui::KeyPressEvent *) override final;
 	void keyReleaseEvent(KDGui::KeyReleaseEvent *) override final;
 	void textInputEvent(KDGui::TextInputEvent *);
+	static slint::LogicalSize physicalSizeToLogical(uint32_t width, uint32_t height, float scaleFactor);
+	static slint::LogicalPosition physicalPositionToLogical(int64_t x, int64_t y, float scaleFactor);
 
 	static std::optional<slint::SharedString> handleKeyPressEvent(uint8_t nativeKeyCode, KDGui::Key key, uint8_t &lastNativeKeyCodePressed, std::optional<KDGui::Key> &lastKdGuiKeyPressed);
 	static std::optional<slint::SharedString> handleKeyReleaseEvent(uint8_t nativeKeyCode, KDGui::Key key);
