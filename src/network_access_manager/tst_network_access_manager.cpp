@@ -841,7 +841,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 
 		const int socket = 0;
 
-		SUBCASE("When FileDescriptorNotifier fires, timeout timer is stopped")
+		SUBCASE("FileDescriptorNotifier does not stop a pending timeout timer during notification")
 		{
 			// GIVEN
 			unitTestHarness.timerCallback(dummyMultiHandlePtr, 1000);
@@ -853,7 +853,9 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 			notifier->triggered.emit(socket);
 
 			// THEN
-			REQUIRE_FALSE(unitTestHarness.timeoutTimer().running.get());
+			REQUIRE(unitTestHarness.timeoutTimer().running.get());
+			app.processEvents(1);
+			unitTestHarness.timerCallback(dummyMultiHandlePtr, -1);
 		}
 
 		SUBCASE("When FileDescriptorNotifier with type 'Read' fires, curl_multi_socket_action() is called")
@@ -864,6 +866,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 			// WHEN
 			const auto &notifier = unitTestHarness.fileDescriptorNotifierRegistry().readMap.at(0);
 			notifier->triggered.emit(socket);
+			app.processEvents(1);
 
 			// THEN
 			REQUIRE(curl_multi_socket_action_fake.call_count == 1);
@@ -880,6 +883,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 			// WHEN
 			const auto &notifier = unitTestHarness.fileDescriptorNotifierRegistry().writeMap.at(0);
 			notifier->triggered.emit(socket);
+			app.processEvents(1);
 
 			// THEN
 			REQUIRE(curl_multi_socket_action_fake.call_count == 1);
@@ -896,9 +900,48 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 			// WHEN
 			const auto &notifier = unitTestHarness.fileDescriptorNotifierRegistry().readMap.at(0);
 			notifier->triggered.emit(socket);
+			app.processEvents(1);
 
 			// THEN
 			REQUIRE(curl_multi_info_read_fake.call_count >= 1);
+		}
+
+		SUBCASE("Queued socket action is canceled when libcurl removes the socket")
+		{
+			// GIVEN
+			unitTestHarness.socketCallback(dummyMultiHandlePtr, socket, CURL_POLL_IN);
+			const auto &notifier = unitTestHarness.fileDescriptorNotifierRegistry().readMap.at(socket);
+			notifier->triggered.emit(socket);
+
+			// WHEN
+			unitTestHarness.socketCallback(dummyMultiHandlePtr, socket, CURL_POLL_REMOVE);
+			app.processEvents(1);
+
+			// THEN
+			REQUIRE(curl_multi_socket_action_fake.call_count == 0);
+		}
+
+		SUBCASE("FileDescriptorNotifier can be destroyed when libcurl removes it after notification")
+		{
+			// GIVEN
+			unitTestHarness.socketCallback(dummyMultiHandlePtr, socket, CURL_POLL_IN);
+			auto *notifier = unitTestHarness.fileDescriptorNotifierRegistry().readMap.at(socket).get();
+			bool notifierDestroyed = false;
+			notifier->destroyed.connect([&notifierDestroyed](Object *) { notifierDestroyed = true; }).release();
+			curl_multi_socket_action_fake.custom_fake = [&](CURLM*, curl_socket_t, int, int*) {
+				unitTestHarness.socketCallback(dummyMultiHandlePtr, socket, CURL_POLL_REMOVE);
+				return CURLM_OK;
+			};
+
+			// WHEN
+			notifier->triggered.emit(socket);
+
+			// THEN
+			REQUIRE(unitTestHarness.fileDescriptorNotifierRegistry().readMap.contains(socket));
+			REQUIRE_FALSE(notifierDestroyed);
+			app.processEvents(1);
+			REQUIRE(unitTestHarness.fileDescriptorNotifierRegistry().readMap.empty());
+			REQUIRE(notifierDestroyed);
 		}
 	}
 
@@ -980,7 +1023,7 @@ TEST_SUITE("NetworkAccessManager and TransferHandles")
 				transferIsRunning = false;
 			};
 
-			transfer.finished.connect(onTransferFinished);
+			KDBindings::ScopedConnection transferFinishedConnection = transfer.finished.connect(onTransferFinished);
 			networkAccessManager.registerTransfer(transfer);
 
 			// WHEN

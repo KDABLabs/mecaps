@@ -1,7 +1,27 @@
 #include "network_access_manager.h"
 
+#include <KDFoundation/core_application.h>
+#include <KDFoundation/event.h>
 #include <functional>
 #include <spdlog/spdlog.h>
+
+namespace {
+class SocketActionEvent final : public Event
+{
+  public:
+	SocketActionEvent(int fileDescriptor, int cselectAction, uint64_t generation)
+		: Event(Event::Type::UserType)
+		, fileDescriptor(fileDescriptor)
+		, cselectAction(cselectAction)
+		, generation(generation)
+	{
+	}
+
+	int fileDescriptor;
+	int cselectAction;
+	uint64_t generation;
+};
+}
 
 const std::map<int,const std::string> NetworkAccessManager::s_curlPollEventToString = {
 	{CURL_POLL_NONE,"CURL_POLL_NONE"},
@@ -58,7 +78,7 @@ NetworkAccessManager::NetworkAccessManager()
 	rc = curl_multi_setopt(m_handle, CURLMOPT_TIMERDATA, &m_timeoutTimer);
 	checkCurlMultiResultAndDoDebugPrints(rc);
 
-	m_timeoutTimer.timeout.connect([this]() {
+	m_timeoutConnection = m_timeoutTimer.timeout.connect([this]() {
 		m_timeoutTimer.running.set(false);
 		onTimeoutTimerTriggered();
 	});
@@ -73,6 +93,9 @@ int NetworkAccessManager::socketCallback(CURL *handle, curl_socket_t socket, int
 {
 	spdlog::debug("NetworkAccessManager::socketCallback() - socket:{}, event:{}", socket, s_curlPollEventToString.at(eventType));
 
+	if (eventType == CURL_POLL_REMOVE) {
+		++self->m_socketGenerations[socket];
+	}
 	self->m_fdnRegistry.manageFileDescriptorNotifiers(socket, eventType);
 
 	return 0;
@@ -100,24 +123,28 @@ int NetworkAccessManager::timerCallback(CURLM *handle, long timeoutMs, Timer *ti
 	return 0;
 }
 
-void NetworkAccessManager::onFileDescriptorNotifierTriggered(int nfd, FileDescriptorNotifier::NotificationType fdnType)
+void NetworkAccessManager::scheduleFileDescriptorAction(int nfd, FileDescriptorNotifier::NotificationType fdnType)
 {
-	spdlog::debug("NetworkAccessManager::onFileDescriptorNotifierTriggered() - fd:{}, {}", nfd, s_notificationTypeToString.at(fdnType));
+	const auto cselectAction = fdnType == FileDescriptorNotifier::NotificationType::Read
+		? CURL_CSELECT_IN
+		: fdnType == FileDescriptorNotifier::NotificationType::Write
+			? CURL_CSELECT_OUT
+			: 0;
+	if (cselectAction == 0) {
+		return;
+	}
 
-	m_timeoutTimer.running = false;
+	auto *app = CoreApplication::instance();
+	if (app) {
+		app->postEvent(this, std::make_unique<SocketActionEvent>(nfd, cselectAction, m_socketGenerations[nfd]));
+	}
+}
 
-	auto cselectFromFileDescriptorNotificationType = [](FileDescriptorNotifier::NotificationType fdnType) {
-		switch (fdnType) {
-		case FileDescriptorNotifier::NotificationType::Read:
-			return CURL_CSELECT_IN;
-		case FileDescriptorNotifier::NotificationType::Write:
-			return CURL_CSELECT_OUT;
-		default:
-			return 0;
-		}
-	};
+void NetworkAccessManager::onFileDescriptorNotifierTriggered(int nfd, int cselectAction)
+{
+	spdlog::debug("NetworkAccessManager::onFileDescriptorNotifierTriggered() - fd:{}, action:{}", nfd, cselectAction);
 
-	auto rc = curl_multi_socket_action(m_handle, nfd, cselectFromFileDescriptorNotificationType(fdnType), &m_numberOfRunningTransfers);
+	auto rc = curl_multi_socket_action(m_handle, nfd, cselectAction, &m_numberOfRunningTransfers);
 	checkCurlMultiResultAndDoDebugPrints(rc);
 
 	processTransferMessages();
@@ -131,6 +158,19 @@ void NetworkAccessManager::onTimeoutTimerTriggered()
 	checkCurlMultiResultAndDoDebugPrints(rc);
 
 	processTransferMessages();
+}
+
+void NetworkAccessManager::event(EventReceiver *target, Event *event)
+{
+	if ((target != this) || (event->type() != Event::Type::UserType)) {
+		return;
+	}
+
+	auto *socketActionEvent = static_cast<SocketActionEvent*>(event);
+	if (m_socketGenerations[socketActionEvent->fileDescriptor] == socketActionEvent->generation) {
+		onFileDescriptorNotifierTriggered(socketActionEvent->fileDescriptor, socketActionEvent->cselectAction);
+	}
+	event->setAccepted(true);
 }
 
 void NetworkAccessManager::processTransferMessages()
@@ -185,7 +225,7 @@ void NetworkAccessManager::FileDescriptorNotifierRegistry::registerFileDescripto
 	}
 
 	fdnMap[nfd] = std::make_unique<FileDescriptorNotifier>(nfd, fdnType);
-	fdnMap[nfd]->triggered.connect([this, nfd, fdnType]() { NetworkAccessManager::instance().onFileDescriptorNotifierTriggered(nfd, fdnType); });
+	fdnMap[nfd]->triggered.connect([nfd, fdnType]() { NetworkAccessManager::instance().scheduleFileDescriptorAction(nfd, fdnType); }).release();
 }
 
 void NetworkAccessManager::FileDescriptorNotifierRegistry::unregisterFileDescriptorNotifier(int nfd, FileDescriptorNotifierMap &fdnMap, FileDescriptorNotifier::NotificationType fdnType)

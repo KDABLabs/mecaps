@@ -1,7 +1,10 @@
 #pragma once
 
 #include <KDFoundation/file_descriptor_notifier.h>
+#include <KDFoundation/event_receiver.h>
 #include <KDFoundation/timer.h>
+#include <kdbindings/connection_handle.h>
+#include <cstdint>
 #include <map>
 #include "abstract_transfer_handle.h"
 
@@ -20,7 +23,7 @@ class INetworkAccessManager
 	virtual ~INetworkAccessManager() {};
 };
 
-class NetworkAccessManager : public INetworkAccessManager
+class NetworkAccessManager : public INetworkAccessManager, private EventReceiver
 {
 	friend class NetworkAccessManagerUnitTestHarness;
 
@@ -41,8 +44,10 @@ class NetworkAccessManager : public INetworkAccessManager
 	static int socketCallback(CURL *handle, curl_socket_t socket, int eventType, NetworkAccessManager *self, void *);
 	static int timerCallback(CURLM *handle, long timeoutMs, Timer *timeoutTimer);
 
-	void onFileDescriptorNotifierTriggered(int nfd, FileDescriptorNotifier::NotificationType fdnType);
+	void scheduleFileDescriptorAction(int nfd, FileDescriptorNotifier::NotificationType fdnType);
+	void onFileDescriptorNotifierTriggered(int nfd, int cselectAction);
 	void onTimeoutTimerTriggered();
+	void event(EventReceiver *target, Event *event) override;
 
 	void processTransferMessages();
 	bool checkCurlMultiResultAndDoDebugPrints(CURLMcode c) const;
@@ -50,6 +55,8 @@ class NetworkAccessManager : public INetworkAccessManager
 	int m_numberOfRunningTransfers;
 	CURLM *m_handle;
 	Timer m_timeoutTimer;
+	KDBindings::ScopedConnection m_timeoutConnection;
+	std::map<int,uint64_t> m_socketGenerations;
 
 	struct FileDescriptorNotifierRegistry
 	{
