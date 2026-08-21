@@ -1,15 +1,12 @@
 #include "application_engine.h"
+#ifdef PDF_AVAILABLE
+#include "pdfium_backend.h"
+#endif
 #ifdef CURL_AVAILABLE
 #include "ftp_transfer_handle.h"
 #include "http_transfer_handle.h"
 #endif
 #include <spdlog/spdlog.h>
-
-ApplicationEngine &ApplicationEngine::init(const slint::ComponentHandle<AppWindow> &appWindow)
-{
-	static ApplicationEngine s_instance(appWindow);
-	return s_instance;
-}
 
 ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &appWindow)
 {
@@ -46,12 +43,19 @@ ApplicationEngine::ApplicationEngine(const slint::ComponentHandle<AppWindow> &ap
 #ifdef MOSQUITTO_AVAILABLE
 	menuItems->push_back(appSingleton.get_mqtt_menu_item());
 #endif
+#ifdef PDF_AVAILABLE
+	appSingleton.set_pdf_menu_index(static_cast<int>(menuItems->row_count()));
+	menuItems->push_back(appSingleton.get_pdf_menu_item());
+	m_pdfDemo = std::make_unique<PdfDemo>(appWindow->global<PdfSingleton>(), mecaps::pdf::createPdfiumBackend());
+#endif
 	appSingleton.set_menu_items(menuItems);
 
 }
-
 ApplicationEngine::~ApplicationEngine()
 {
+#ifdef PDF_AVAILABLE
+	m_pdfDemo.reset();
+#endif
 #ifdef MOSQUITTO_AVAILABLE
 	MqttLib::instance().cleanup();
 #endif

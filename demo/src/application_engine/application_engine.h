@@ -9,19 +9,18 @@
 #endif
 #include "slint.h"
 
+#ifdef PDF_AVAILABLE
+#include "pdf_demo.h"
+#endif
+
 class ApplicationEngine
 {
-	friend class ApplicationEngineUnitTestHarness;
-
-  private:
+  public:
 	ApplicationEngine(const slint::ComponentHandle<AppWindow> &appWindow);
 	~ApplicationEngine();
 
 	ApplicationEngine(const ApplicationEngine&) = delete;
 	ApplicationEngine &operator=(const ApplicationEngine&) = delete;
-
-  public:
-	static ApplicationEngine &init(const slint::ComponentHandle<AppWindow> &appWindow);
 
   private:
 	static void InitCounterDemo(const CounterSingleton &uiPageCounter);
@@ -31,5 +30,8 @@ class ApplicationEngine
 #endif
 #ifdef MOSQUITTO_AVAILABLE
 	static void InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttClient &mqttClient);
+#endif
+#ifdef PDF_AVAILABLE
+	std::unique_ptr<PdfDemo> m_pdfDemo;
 #endif
 };

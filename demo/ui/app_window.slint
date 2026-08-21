@@ -4,17 +4,20 @@ import { CounterPage, CounterSingleton } from "pages/counter_page.slint";
 import { FtpPage, FtpSingleton } from "pages/ftp_page.slint";
 import { HttpPage, HttpSingleton } from "pages/http_page.slint";
 import { MqttPage, MqttSingleton } from "pages/mqtt_page.slint";
+import { PdfPage, PdfSingleton } from "pages/pdf_page.slint";
 
-export { CounterSingleton, FtpSingleton, HttpSingleton, MqttSingleton }
+export { CounterSingleton, FtpSingleton, HttpSingleton, MqttSingleton, PdfSingleton }
 
 export global AppSingleton {
     in property<bool> curl-available: true;
     in property<bool> mosquitto-available: true;
+    in property<int> pdf-menu-index: -1;
     in property<[string]> menu-items: [];
     out property<string> counter-menu-item: @tr("Menu" => "Counter");
     out property<string> http-menu-item: @tr("Menu" => "HTTP");
     out property<string> ftp-menu-item: @tr("Menu" => "FTP");
     out property<string> mqtt-menu-item: @tr("Menu" => "MQTT");
+    out property<string> pdf-menu-item: @tr("Menu" => "PDF");
 }
 
 export component AppWindow inherits Window {
@@ -50,6 +53,12 @@ export component AppWindow inherits Window {
 
     mqtt-page := MqttPage {
         visible: AppSingleton.curl-available ? (sideBar.current-item == 3) : (sideBar.current-item == 1);
+        width: root.width - sideBar.width;
+        x: sideBar.x+sideBar.width;
+    }
+
+    pdf-page := PdfPage {
+        visible: AppSingleton.pdf-menu-index >= 0 && sideBar.current-item == AppSingleton.pdf-menu-index;
         width: root.width - sideBar.width;
         x: sideBar.x+sideBar.width;
     }

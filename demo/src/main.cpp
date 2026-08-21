@@ -23,7 +23,7 @@ int main()
 	// and make createAndIntegrateWindow fail with an AlreadySet error
 	auto slintApp = AppWindow::create();
 
-	ApplicationEngine::init(slintApp);
+	ApplicationEngine applicationEngine(slintApp);
 
 	slintApp->run();
 

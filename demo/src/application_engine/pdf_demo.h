@@ -1,0 +1,57 @@
+#pragma once
+
+#include "app_window.h"
+#include "pdf_controller.h"
+
+#include <atomic>
+#include <condition_variable>
+#include <cstddef>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <vector>
+
+class PdfDemo
+{
+  public:
+	PdfDemo(const PdfSingleton &ui, std::unique_ptr<mecaps::pdf::Backend> backend);
+	~PdfDemo();
+
+	PdfDemo(const PdfDemo &) = delete;
+	PdfDemo &operator=(const PdfDemo &) = delete;
+
+  private:
+	void open(const slint::SharedString &path);
+	void runFileWorker();
+	void completeFileRead(
+	        mecaps::pdf::GenerationId generation,
+	        std::vector<std::byte> data,
+	        std::string_view error);
+	void showPage(std::size_t pageIndex);
+	void publishError(mecaps::pdf::DocumentError error);
+
+	struct FileRequest {
+		mecaps::pdf::GenerationId generation;
+		std::string path;
+	};
+
+	struct PublicationState {
+		std::atomic_bool alive { true };
+		std::atomic<mecaps::pdf::GenerationId> generation { 0 };
+	};
+
+	const PdfSingleton &m_ui;
+	std::unique_ptr<mecaps::pdf::Controller> m_controller;
+	std::shared_ptr<PublicationState> m_publication = std::make_shared<PublicationState>();
+	std::mutex m_fileMutex;
+	std::condition_variable m_fileReady;
+	std::optional<FileRequest> m_fileRequest;
+	std::thread m_fileWorker;
+	mecaps::pdf::GenerationId m_generation { 0 };
+	std::size_t m_pageIndex { 0 };
+	std::size_t m_pageCount { 0 };
+	bool m_stopping { false };
+};

@@ -1,0 +1,92 @@
+import { Button, HorizontalBox, LineEdit, VerticalBox } from "std-widgets.slint";
+import { Page } from "page.slint";
+
+export global PdfSingleton {
+    in-out property<string> document-path: "";
+    in property<image> page-image;
+    in property<int> page-number: 0;
+    in property<int> page-count: 0;
+    in property<bool> loading: false;
+    in property<string> error-message: "";
+
+    callback request-open(string);
+    callback request-previous();
+    callback request-next();
+}
+
+export component PdfPage inherits Page {
+    title: @tr("PDF");
+    description: @tr("asynchronous single-page viewer");
+
+    VerticalBox {
+        HorizontalBox {
+            vertical-stretch: 0;
+
+            LineEdit {
+                text <=> PdfSingleton.document-path;
+                placeholder-text: @tr("Path to a PDF document");
+                accepted => { PdfSingleton.request-open(self.text); }
+            }
+
+            Button {
+                text: @tr("Open");
+                enabled: !PdfSingleton.loading && PdfSingleton.document-path != "";
+                clicked => { PdfSingleton.request-open(PdfSingleton.document-path); }
+            }
+        }
+
+        Rectangle {
+            background: #404040;
+            clip: true;
+            vertical-stretch: 1;
+
+            Image {
+                source: PdfSingleton.page-image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+
+            Text {
+                visible: PdfSingleton.loading;
+                text: @tr("Loading...");
+                color: white;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Text {
+                visible: !PdfSingleton.loading && PdfSingleton.error-message != "";
+                text: PdfSingleton.error-message;
+                color: #ffb4ab;
+                wrap: word-wrap;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        HorizontalBox {
+            vertical-stretch: 0;
+
+            Button {
+                text: @tr("Previous");
+                enabled: !PdfSingleton.loading && PdfSingleton.page-number > 1;
+                clicked => { PdfSingleton.request-previous(); }
+            }
+
+            Text {
+                text: PdfSingleton.page-count > 0
+                    ? @tr("Page") + " " + PdfSingleton.page-number + " / " + PdfSingleton.page-count
+                    : @tr("No document");
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Button {
+                text: @tr("Next");
+                enabled: !PdfSingleton.loading && PdfSingleton.page-number < PdfSingleton.page-count;
+                clicked => { PdfSingleton.request-next(); }
+            }
+        }
+    }
+}
