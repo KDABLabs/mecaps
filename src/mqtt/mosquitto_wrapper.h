@@ -93,8 +93,8 @@ class MosquittoClient
 		mosquitto_destroy(m_clientInstance);
 	}
 
-	virtual int connect(const std::string &host, int port, int keepalive) {
-		return mosquitto_connect(m_clientInstance, host.c_str(), port, keepalive);
+	virtual int connectAsync(const std::string &host, int port, int keepalive) {
+		return mosquitto_connect_async(m_clientInstance, host.c_str(), port, keepalive);
 	}
 
 	virtual int disconnect() {

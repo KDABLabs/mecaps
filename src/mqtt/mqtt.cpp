@@ -96,6 +96,10 @@ MqttClient::MqttClient(const std::string &clientId, bool cleanSession, bool verb
 	auto client = std::make_unique<MosquittoClient>(clientId, cleanSession);
 	m_mosquitto.init(std::move(client), this);
 
+	m_establishConnectionTaskTimer.interval.set(std::chrono::milliseconds(200));
+	m_establishConnectionTaskTimer.running.set(false);
+	m_establishConnectionTaskConnection = m_establishConnectionTaskTimer.timeout.connect(&MqttClient::establishConnectionTask, this);
+
 	m_eventLoopHook.init(c_miscTaskInterval, this);
 }
 
@@ -163,19 +167,11 @@ int MqttClient::connect(const Url &host, int port, int keepalive)
 	}
 
 	connectionState.set(ConnectionState::CONNECTING);
-	// TODO -> TLS only works with connect(), it does not work with connect_async()
-	// I'm uncertain if there is a setup that allows for connect_async() with TLS (I didn't manage to find one)
-	// (the use of non-blocking connect_async() would be preferred from our POV)
-	// other people seem to have encountered similiar behaviour before, though this issue should have been fixed a while ago
-	// -> https://github.com/eclipse/mosquitto/issues/990
-	const auto start = clock();
-	const auto result = m_mosquitto.client()->connect(host.url().c_str(), port, keepalive);
-	const auto end = clock();
-	const auto elapsedTimeMs = std::round((double(end-start) / double(CLOCKS_PER_SEC)) * 1000000.0);
-	spdlog::info("MqttClient::connect() - blocking call of MosquittoClient::connect() took {} µs", elapsedTimeMs);
+	const auto result = m_mosquitto.client()->connectAsync(host.url().c_str(), port, keepalive);
 
 	const auto hasError = MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "MqttClient::connect()");
 	if (!hasError) {
+		m_establishConnectionTaskTimer.running.set(true);
 		m_eventLoopHook.engage(m_mosquitto.client()->socket());
 	}
 	return result;
@@ -184,6 +180,7 @@ int MqttClient::connect(const Url &host, int port, int keepalive)
 int MqttClient::disconnect()
 {
 	spdlog::debug("MqttClient::disconnect()");
+	m_establishConnectionTaskTimer.running.set(false);
 
 	if (connectionState.get() == ConnectionState::DISCONNECTING) {
 		spdlog::error("MqttClient::disconnect() - Already diconnecting from host.");
@@ -258,6 +255,8 @@ int MqttClient::unsubscribe(const char *pattern)
 void MqttClient::onConnected(int connackCode)
 {
 	spdlog::debug("MqttClient::onConnected() - connackCode({}): {}", connackCode, MqttLib::instance().connackString(connackCode));
+	m_establishConnectionTaskTimer.running.set(false);
+
 	const auto hasError = (connackCode != 0);
 	if (hasError) {
 		// TODO -> I'm uncertain if calling unhookFromEventLoop() here is perfectly fine in every case
@@ -281,8 +280,11 @@ void MqttClient::onConnected(int connackCode)
 void MqttClient::onDisconnected(int reasonCode)
 {
 	spdlog::debug("MqttClient::onDisconnected() - reasonCode({}): {}", reasonCode, MqttLib::instance().reasonString(reasonCode));
+	m_establishConnectionTaskTimer.running.set(false);
 
-	m_eventLoopHook.disengage();
+	if (m_eventLoopHook.isEngaged()) {
+		m_eventLoopHook.disengage();
+	}
 
 	connectionState.set(ConnectionState::DISCONNECTED);
 }
@@ -334,6 +336,7 @@ void MqttClient::onLog(int level, const char *str) const
 void MqttClient::onError()
 {
 	spdlog::error("MqttClient::onError()");
+	m_establishConnectionTaskTimer.running.set(false);
 	error.emit();
 }
 
@@ -358,6 +361,21 @@ void MqttClient::onMiscTaskRequested()
 {
 	auto result = m_mosquitto.client()->loopMisc();
 	MqttLib::instance().checkMosquittoResultAndDoDebugPrints(result, "loopMisc()");
+}
+
+void MqttClient::establishConnectionTask()
+{
+	onReadOpRequested();
+	if (!m_establishConnectionTaskTimer.running.get()) {
+		return;
+	}
+
+	onWriteOpRequested();
+	if (!m_establishConnectionTaskTimer.running.get()) {
+		return;
+	}
+
+	onMiscTaskRequested();
 }
 
 void MqttClient::EventLoopHook::init(const std::chrono::milliseconds miscTaskInterval, MqttClient *parent)

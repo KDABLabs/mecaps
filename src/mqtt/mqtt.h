@@ -170,6 +170,10 @@ class MqttClient : public IMqttClient
 	void onReadOpRequested();
 	void onWriteOpRequested();
 	void onMiscTaskRequested();
+	void establishConnectionTask();
+
+	Timer m_establishConnectionTaskTimer;
+	KDBindings::ScopedConnection m_establishConnectionTaskConnection;
 
 	/*
 	 * This struct modularizes the mechanism to hook mosquitto's
