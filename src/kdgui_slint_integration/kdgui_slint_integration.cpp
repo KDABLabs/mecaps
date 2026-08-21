@@ -18,7 +18,7 @@ KDGui::Window *createAndIntegrateWindow(slint::PhysicalSize windowSize)
 		if (!visible) {
 			slint::quit_event_loop();
 		}
-	});
+	}).release();
 
 	return window;
 }

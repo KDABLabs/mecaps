@@ -36,7 +36,7 @@ SlintWrapperWindow::SlintWrapperWindow(KDWindowAdapter *adapter)
 		SPDLOG_DEBUG(
 			"Slint window scale does not match OS window scale. Updating...");
 		m_adapter->window().dispatch_scale_factor_change_event(newScale);
-	});
+	}).release();
 }
 
 void SlintWrapperWindow::event(EventReceiver *target,
