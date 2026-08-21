@@ -38,6 +38,8 @@ class PdfDemo
 	void panBy(double deltaX, double deltaY, bool immediate);
 	void scheduleRender(bool immediate = false);
 	void renderViewport(mecaps::pdf::GenerationId generation);
+	void prefetchAdjacent(mecaps::pdf::GenerationId generation);
+	void prefetchPage(mecaps::pdf::GenerationId generation, std::size_t pageIndex);
 	void updatePreview();
 	void publishError(mecaps::pdf::DocumentError error);
 

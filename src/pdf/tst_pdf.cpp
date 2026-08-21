@@ -30,6 +30,8 @@ class FakeDocument final : public Document
 		return { { 612.0, 792.0 } };
 	}
 
+	void beginRender() noexcept override { m_cancelled = false; }
+
 	[[nodiscard]] Result<void> render(const RenderRequest &request, PixelBuffer buffer) noexcept override
 	{
 		if (m_cancelled && m_honorCancellation)
@@ -117,10 +119,12 @@ TEST_SUITE("PDF contract")
 		const PixelBuffer buffer { storage, 1, 1, 4, PixelFormat::rgba8 };
 
 		FakeDocument cancellable;
+		cancellable.beginRender();
 		cancellable.cancel();
 		CHECK(cancellable.render(request, buffer).error == DocumentError::cancelled);
 
 		FakeDocument completing(false);
+		completing.beginRender();
 		completing.cancel();
 		CHECK(completing.render(request, buffer));
 	}

@@ -141,9 +141,11 @@ TEST_SUITE("PDFium backend")
 		std::array<std::byte, 20 * 10 * 4> pixels {};
 		const RenderRequest request { 0, { 0.0, 0.0, 20.0, 10.0 }, 20, 10 };
 		const PixelBuffer buffer { pixels, 20, 10, 80, PixelFormat::rgba8 };
+		result.value->beginRender();
 		result.value->cancel();
 
-		CHECK(result.value->render(request, buffer));
+		CHECK(result.value->render(request, buffer).error == DocumentError::cancelled);
+		result.value->beginRender();
 		CHECK(result.value->render(request, buffer));
 	}
 }

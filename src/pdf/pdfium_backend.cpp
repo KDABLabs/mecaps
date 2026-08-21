@@ -161,10 +161,10 @@ class PdfiumDocument final : public Document
 		return { { FPDF_GetPageWidth(page.get()), FPDF_GetPageHeight(page.get()) } };
 	}
 
+	void beginRender() noexcept override { m_cancelled.store(false, std::memory_order_relaxed); }
+
 	[[nodiscard]] Result<void> render(const RenderRequest &request, PixelBuffer buffer) noexcept override
 	{
-		m_cancelled.store(false, std::memory_order_relaxed);
-
 		if (request.pageIndex >= m_pageCount)
 			return { DocumentError::pageOutOfBounds };
 

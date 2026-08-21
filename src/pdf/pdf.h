@@ -88,6 +88,7 @@ class Document
 
 	[[nodiscard]] virtual std::size_t pageCount() const noexcept = 0;
 	[[nodiscard]] virtual Result<PageMetadata> pageMetadata(std::size_t pageIndex) const noexcept = 0;
+	virtual void beginRender() noexcept = 0;
 	[[nodiscard]] virtual Result<void> render(const RenderRequest &request, PixelBuffer buffer) noexcept = 0;
 	virtual void cancel() noexcept = 0;
 };

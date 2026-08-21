@@ -297,17 +297,52 @@ void PdfDemo::renderViewport(mecaps::pdf::GenerationId generation)
 			                render.request.outputWidth, render.request.outputHeight);
 			        const auto destinationBytes = static_cast<std::size_t>(pixels.end() - pixels.begin())
 			                * sizeof(slint::Rgb8Pixel);
-			        if (destinationBytes != render.pixels.size()) {
+			        if (!render.pixels || destinationBytes != render.pixels->size()) {
 				        publishError(mecaps::pdf::DocumentError::backendFailure);
 				        return;
 			        }
-			        std::memcpy(pixels.begin(), render.pixels.data(), destinationBytes);
+			        std::memcpy(pixels.begin(), render.pixels->data(), destinationBytes);
 			        m_renderedClip = render.request.clip;
 			        m_ui.set_page_image(slint::Image(std::move(pixels)));
 			        updatePreview();
 			        m_ui.set_page_number(static_cast<int>(m_pageIndex + 1));
 			        m_ui.set_loading(false);
+			        prefetchAdjacent(render.generation);
 		        });
+}
+
+void PdfDemo::prefetchAdjacent(mecaps::pdf::GenerationId generation)
+{
+	if (m_pageIndex > 0)
+		prefetchPage(generation, m_pageIndex - 1);
+	if (m_pageIndex + 1 < m_pageCount)
+		prefetchPage(generation, m_pageIndex + 1);
+}
+
+void PdfDemo::prefetchPage(mecaps::pdf::GenerationId generation, std::size_t pageIndex)
+{
+	m_controller->pageMetadata(generation, pageIndex,
+	        [this](mecaps::pdf::PageMetadataResult metadata) {
+		        if (metadata.error != mecaps::pdf::DocumentError::none)
+			        return;
+
+		        const double viewportWidth = m_ui.get_viewport_width();
+		        const double viewportHeight = m_ui.get_viewport_height();
+		        mecaps::pdf::Viewport viewport;
+		        viewport.setViewport(viewportWidth, viewportHeight, m_ui.get_display_scale());
+		        viewport.setPage(metadata.pageIndex, metadata.metadata);
+		        if (m_viewport.fitMode() == mecaps::pdf::FitMode::custom) {
+			        viewport.zoomBy(m_viewport.scale() / viewport.scale(),
+			                { viewportWidth / 2.0, viewportHeight / 2.0 });
+		        } else {
+			        viewport.setFitMode(m_viewport.fitMode());
+		        }
+		        const auto plan = viewport.renderPlan();
+		        if (!plan)
+			        return;
+		        m_controller->render(metadata.generation, plan->request, mecaps::pdf::PixelFormat::rgb8,
+			        [](mecaps::pdf::RenderResult) {}, mecaps::pdf::RenderPriority::prefetch);
+	        });
 }
 
 void PdfDemo::updatePreview()

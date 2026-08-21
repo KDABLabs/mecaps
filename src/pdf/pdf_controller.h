@@ -20,6 +20,12 @@ struct ControllerLimits {
 	double maxPageHeightPoints { 20'000.0 };
 	std::size_t maxOutputPixels { defaultMaxOutputPixels };
 	std::size_t maxInFlightRequests { 16U };
+	std::size_t maxRasterCacheBytes { 32U * 1024U * 1024U };
+};
+
+enum class RenderPriority {
+	visible,
+	prefetch,
 };
 
 struct OpenResult {
@@ -38,7 +44,7 @@ struct PageMetadataResult {
 struct RenderResult {
 	GenerationId generation { 0 };
 	RenderRequest request;
-	std::vector<std::byte> pixels;
+	std::shared_ptr<const std::vector<std::byte>> pixels;
 	std::uint32_t strideBytes { 0 };
 	PixelFormat format { PixelFormat::rgba8 };
 	DocumentError error { DocumentError::none };
@@ -65,7 +71,8 @@ class Controller
 	        GenerationId generation,
 	        RenderRequest request,
 	        PixelFormat format,
-	        RenderCallback callback);
+	        RenderCallback callback,
+	        RenderPriority priority = RenderPriority::visible);
 	void replaceGeneration(GenerationId generation);
 
   private:
