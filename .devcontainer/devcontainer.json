@@ -12,6 +12,7 @@
 	// - changes container user from default user to root which maps to host user
 	// -> https://docs.docker.com/engine/security/rootless/#how-it-works
 	"containerUser": "root",
+	"runArgs": [ "--ipc=host" ],
 
 	// X11 | Wayland Setup
 	// - mounts UDS directory to allow for running GUIs from inside the container
@@ -21,6 +22,7 @@
 	"mounts": [ "source=/tmp/.X11-unix/,target=/tmp/.X11-unix/,type=bind" ],
 	"remoteEnv": {
 		"DISPLAY": "${localEnv:DISPLAY}",
+		"LIBGL_ALWAYS_SOFTWARE": "1",
 		"XDG_RUNTIME_DIR": "/run/user/${localEnv:UID}"
 	},
 
