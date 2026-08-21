@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <span>
+#include <vector>
 
 namespace mecaps::pdf {
 
@@ -94,7 +95,7 @@ class Backend
   public:
 	virtual ~Backend() = default;
 
-	[[nodiscard]] virtual Result<std::unique_ptr<Document>> open(std::span<const std::byte> documentData) noexcept = 0;
+	[[nodiscard]] virtual Result<std::unique_ptr<Document>> open(std::vector<std::byte> documentData) noexcept = 0;
 };
 
 [[nodiscard]] DocumentError validateRenderRequest(

@@ -51,7 +51,7 @@ class FakeDocument final : public Document
 class FakeBackend final : public Backend
 {
   public:
-	[[nodiscard]] Result<std::unique_ptr<Document>> open(std::span<const std::byte> data) noexcept override
+	[[nodiscard]] Result<std::unique_ptr<Document>> open(std::vector<std::byte> data) noexcept override
 	{
 		if (data.empty())
 			return { nullptr, DocumentError::invalidDocument };

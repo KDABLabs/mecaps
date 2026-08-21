@@ -5,6 +5,14 @@ add_library(mecaps::${TARGET_NAME} ALIAS ${TARGET_NAME})
 
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(BUILD_INTEGRATION_PDF)
+	set(PDFIUM_TARGET_NAME pdf_pdfium)
+	add_library(${PDFIUM_TARGET_NAME} STATIC pdfium_backend.cpp)
+	add_library(mecaps::${PDFIUM_TARGET_NAME} ALIAS ${PDFIUM_TARGET_NAME})
+	target_include_directories(${PDFIUM_TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_link_libraries(${PDFIUM_TARGET_NAME} PUBLIC ${TARGET_NAME} PRIVATE pdfium)
+endif()
+
 if(BUILD_TESTS)
 	include(doctest)
 	set(UNITTEST_TARGET_NAME test_${TARGET_NAME})
@@ -18,4 +26,22 @@ if(BUILD_TESTS)
 		LABELS
 		"mecaps"
 	)
+
+	if(BUILD_INTEGRATION_PDF)
+		set(PDFIUM_UNITTEST_TARGET_NAME test_pdf_pdfium)
+		add_executable(${PDFIUM_UNITTEST_TARGET_NAME} tst_pdfium.cpp)
+		target_compile_definitions(
+			${PDFIUM_UNITTEST_TARGET_NAME}
+			PRIVATE PDF_TEST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+		)
+		target_link_libraries(${PDFIUM_UNITTEST_TARGET_NAME} PRIVATE ${PDFIUM_TARGET_NAME} doctest::doctest)
+		doctest_discover_tests(
+			${PDFIUM_UNITTEST_TARGET_NAME}
+			ADD_LABELS
+			1
+			PROPERTIES
+			LABELS
+			"mecaps"
+		)
+	endif()
 endif()
