@@ -89,7 +89,7 @@ class MosquittoClient
 		mosquitto_log_callback_set(m_clientInstance, onLog);
 	}
 
-	~MosquittoClient() {
+	virtual ~MosquittoClient() {
 		mosquitto_destroy(m_clientInstance);
 	}
 

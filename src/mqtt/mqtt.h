@@ -4,6 +4,8 @@
 #include <KDFoundation/timer.h>
 #include <KDUtils/file.h>
 #include <KDUtils/url.h>
+#include <kdbindings/connection_handle.h>
+#include <memory>
 #include "mosquitto_wrapper.h"
 
 using namespace KDFoundation;
@@ -192,26 +194,39 @@ class MqttClient : public IMqttClient
 		std::unique_ptr<FileDescriptorNotifier> writeOpNotifier;
 		std::unique_ptr<Timer> miscTaskTimer;
 		MqttClient *parent { nullptr };
+		KDBindings::ScopedConnection miscTaskConnection;
+		KDBindings::ScopedConnection readOpConnection;
+		KDBindings::ScopedConnection writeOpConnection;
 	};
 	EventLoopHook m_eventLoopHook;
 
 	/*
 	 * This struct modularizes the dependency to the mosquitto
 	 * library's client implementation.
-	 * It owns the mosquitto client instance and is responsible
-	 * for initializing MqttClient with the provided mosquitto
-	 * client instance.
-	 * This is also relevant when passing a mosquitto client mock
-	 * for unit testing.
+	 * It owns the production mosquitto client instance and supports
+	 * non-owning injection of a mosquitto client mock for unit testing.
 	 */
 	struct MosquittoClientDependency
 	{
 	  public:
+		void init(std::unique_ptr<MosquittoClient> client, MqttClient *parent);
 		void init(MosquittoClient *client, MqttClient *parent);
 		MosquittoClient *client();
 
 	  private:
+		void connect(MosquittoClient *client, MqttClient *parent);
+		void disconnect();
+
+		std::unique_ptr<MosquittoClient> ownedMosquittoClient;
 		MosquittoClient* mosquittoClient { nullptr };
+		KDBindings::ScopedConnection connectedConnection;
+		KDBindings::ScopedConnection disconnectedConnection;
+		KDBindings::ScopedConnection publishedConnection;
+		KDBindings::ScopedConnection messageConnection;
+		KDBindings::ScopedConnection subscribedConnection;
+		KDBindings::ScopedConnection unsubscribedConnection;
+		KDBindings::ScopedConnection logConnection;
+		KDBindings::ScopedConnection errorConnection;
 	};
 	MosquittoClientDependency m_mosquitto;
 
