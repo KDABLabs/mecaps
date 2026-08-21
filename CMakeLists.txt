@@ -13,7 +13,24 @@ option(BUILD_DEMO_UI "Build Demo UI" ON)
 option(BUILD_INTEGRATION_CURL "Build Curl Integration" ON)
 option(BUILD_INTEGRATION_KDGUI_SLINT "Build KDGui/Slint Integration" ON)
 option(BUILD_INTEGRATION_MQTT "Build MQTT Integration" ON) # this will be overriden in dependencies.cmake for now
+option(BUILD_INTEGRATION_PDF "Build PDF Integration" OFF)
 option(BUILD_TESTS "Build Tests" ON)
+
+if (BUILD_INTEGRATION_PDF)
+    if (NOT PDFium_DIR)
+        message(FATAL_ERROR
+            "BUILD_INTEGRATION_PDF requires PDFium_DIR to point to a provisioned PDFium SDK; "
+            "mecaps does not download PDFium automatically."
+        )
+    endif()
+
+    find_package(PDFium REQUIRED CONFIG)
+    if (NOT TARGET pdfium)
+        message(FATAL_ERROR
+            "The PDFium package at '${PDFium_DIR}' does not provide the required 'pdfium' target."
+        )
+    endif()
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/ECM/find-modules")
 
@@ -37,6 +54,10 @@ endif()
 
 if (BUILD_INTEGRATION_MQTT)
     add_subdirectory(src/mqtt)
+endif()
+
+if (BUILD_INTEGRATION_PDF)
+    add_subdirectory(src/pdf)
 endif()
 
 if (BUILD_DEMO_UI AND BUILD_INTEGRATION_KDGUI_SLINT)
