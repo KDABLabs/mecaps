@@ -11,6 +11,7 @@ if(NOT KDUtils_FOUND)
         GIT_TAG v1.17.0
     )
     FetchContent_MakeAvailable(spdlog)
+    set_target_properties(spdlog PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
     set(KDBindings_TESTS OFF CACHE BOOL "Build KDBindings tests" FORCE)
     set(KDBindings_EXAMPLES OFF CACHE BOOL "Build KDBindings examples" FORCE)

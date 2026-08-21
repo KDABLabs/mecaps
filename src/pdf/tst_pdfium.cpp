@@ -68,7 +68,8 @@ TEST_SUITE("PDFium backend")
 		auto backend = createPdfiumBackend();
 		const auto fixture = loadFixture("demo_letter.pdf");
 		REQUIRE(fixture.starts_with("%PDF-1.4"));
-		auto result = backend->open(std::as_bytes(std::span(fixture)));
+		const auto bytes = std::as_bytes(std::span(fixture));
+		auto result = backend->open({ bytes.begin(), bytes.end() });
 		REQUIRE(result);
 		REQUIRE(result.value->pageCount() == 2);
 

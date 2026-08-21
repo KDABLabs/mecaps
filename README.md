@@ -43,6 +43,68 @@ are:
 sudo apt install build-essential cmake git libxkbcommon-dev libxcb-xkb-dev libxkbcommon-x11-dev wayland-scanner++ wayland-protocols libwayland-dev libmosquittopp-dev
 ```
 
+## PDF host POC
+
+PDF support is optional and disabled by default. The current POC uses a pinned,
+checksummed Linux x86-64 PDFium SDK with V8 and XFA disabled. Provision the SDK
+outside the mecaps source tree:
+
+```sh
+./tools/pdfium/provision-linux-x64.sh ../pdfium-sdk
+```
+
+The provisioner verifies the archive, SDK contents, build configuration, CMake
+package, linking, and PDFium initialization. It installs the SDK at:
+
+```text
+../pdfium-sdk/pdfium-153.0.8009.0-linux-x64
+```
+
+Verify that the normal PDF-disabled configuration remains clean:
+
+```sh
+cmake -S . -B build-pdf-off -DBUILD_INTEGRATION_PDF=OFF
+cmake --build build-pdf-off
+ctest --test-dir build-pdf-off --output-on-failure
+```
+
+Configure and verify the PDF-enabled host build:
+
+```sh
+cmake -S . -B build-pdf-on \
+  -DBUILD_INTEGRATION_PDF=ON \
+  -DPDFium_DIR="$PWD/../pdfium-sdk/pdfium-153.0.8009.0-linux-x64"
+cmake --build build-pdf-on
+ctest --test-dir build-pdf-on --output-on-failure
+ctest --test-dir build-pdf-on --output-on-failure -L '^PDF'
+```
+
+`BUILD_INTEGRATION_PDF=ON` without `PDFium_DIR` intentionally fails during
+configuration because mecaps never downloads PDFium as part of a normal build.
+
+Launch the PDF-enabled demo:
+
+```sh
+./build-pdf-on/demo/mecaps_demo_ui
+```
+
+Open the **PDF** page. The path field initially points to `demo_letter.pdf`,
+which is copied next to the executable. Use it to exercise the POC:
+
+1. Open the sample and use **Previous** and **Next** to navigate pages.
+2. Switch between **Fit Page** and **Fit Width**.
+3. Use **-** and **+** to change zoom, then drag or use the mouse wheel to pan.
+4. Enter a path that does not exist. The viewer must show `Could not open the PDF file.` without terminating.
+5. Open a readable non-PDF file. The viewer must show `The document is not a valid PDF.` without terminating.
+
+The POC currently has these deferred limitations:
+
+* The provisioned SDK is for Linux x86-64 host development only; an i.MX95 Linux/AArch64 SDK is not yet integrated.
+* Password-protected PDFs are not supported.
+* PDFium is not sandboxed, so the POC is not suitable for untrusted documents.
+* Compatibility testing covers only a limited PDF corpus.
+* Performance, memory, footprint, and latency have not been measured on reference hardware.
+
 ## Usage
 
 1. Clone or download this repository
