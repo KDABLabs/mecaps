@@ -15,7 +15,7 @@ if(NOT Slint_FOUND)
     GIT_REPOSITORY https://github.com/slint-ui/slint.git
     # `release/1` will auto-upgrade to the latest Slint >= 1.0.0 and < 2.0.0
     # `release/1.0` will auto-upgrade to the latest Slint >= 1.0.0 and < 1.1.0
-    GIT_TAG v1.12.1
+    GIT_TAG v1.17.1
     SOURCE_SUBDIR api/cpp)
   FetchContent_MakeAvailable(Slint)
 endif(NOT Slint_FOUND)
