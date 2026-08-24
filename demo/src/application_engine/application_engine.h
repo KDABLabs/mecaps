@@ -7,6 +7,9 @@
 #ifdef CURL_AVAILABLE
 #include "network_access_manager.h"
 #endif
+#ifdef VIDEO_AVAILABLE
+#include "video_demo.h"
+#endif
 #include "slint.h"
 
 class ApplicationEngine
@@ -31,5 +34,8 @@ class ApplicationEngine
 #endif
 #ifdef MOSQUITTO_AVAILABLE
 	static void InitMqttDemo(const MqttSingleton &mqttSingleton, IMqttClient &mqttClient);
+#endif
+#ifdef VIDEO_AVAILABLE
+	std::unique_ptr<VideoDemo> m_videoDemo;
 #endif
 };

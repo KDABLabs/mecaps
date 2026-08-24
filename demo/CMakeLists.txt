@@ -15,6 +15,15 @@ if(BUILD_INTEGRATION_MQTT)
     )
 endif()
 
+# Deployment: Copy the sample video next to the application binary so that it's found.
+if(BUILD_INTEGRATION_VIDEO)
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/src/video/fixtures/mecaps_demo.webm"
+        $<TARGET_FILE_DIR:${TARGET_NAME}>
+    )
+endif()
+
 if (WIN32)
     target_compile_definitions(${TARGET_NAME} PRIVATE NOMINMAX)
     # Deployment: On Windows, copy the Slint DLL next to the application binary so that it's found.

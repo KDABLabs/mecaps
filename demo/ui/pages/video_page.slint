@@ -1,0 +1,118 @@
+import { Button, HorizontalBox, LineEdit, Slider, Switch, VerticalBox } from "std-widgets.slint";
+import { Page } from "page.slint";
+
+export global VideoSingleton {
+    in-out property<string> source-path;
+    in property<image> frame;
+    in property<string> status: @tr("No media");
+    in property<string> error;
+    in property<bool> playing;
+    in-out property<float> position-ms;
+    in property<int> duration-ms;
+    in property<bool> seekable;
+    in-out property<float> volume: 1.0;
+    in-out property<bool> muted;
+
+    callback open();
+    callback play();
+    callback pause();
+    callback stop();
+    callback seek(int);
+    callback set-volume(float);
+    callback set-muted(bool);
+}
+
+export component VideoPage inherits Page {
+    title: @tr("Video");
+    description: @tr("GStreamer local playback");
+
+    property<float> player-position-ms <=> VideoSingleton.position-ms;
+    property<float> slider-position-ms: player-position-ms;
+    property<float> seek-target-ms;
+    property<bool> position-slider-dragging: false;
+    property<bool> position-seek-pending: false;
+
+    changed player-position-ms => {
+        if (!position-slider-dragging
+            && (!position-seek-pending
+                || (player-position-ms >= seek-target-ms - 1
+                    && player-position-ms <= seek-target-ms + 1))) {
+            slider-position-ms = player-position-ms;
+            position-seek-pending = false;
+        }
+    }
+
+    VerticalBox {
+        spacing: 8px;
+
+        HorizontalBox {
+            vertical-stretch: 0;
+            LineEdit {
+                text <=> VideoSingleton.source-path;
+                placeholder-text: @tr("Local media file path");
+            }
+            Button {
+                text: @tr("Open");
+                clicked => { VideoSingleton.open(); }
+            }
+        }
+
+        Rectangle {
+            background: #181818;
+            vertical-stretch: 1;
+            Image {
+                source: VideoSingleton.frame;
+                image-fit: ImageFit.contain;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+
+        Text {
+            vertical-stretch: 0;
+            text: VideoSingleton.error == "" ? VideoSingleton.status : VideoSingleton.error;
+            color: VideoSingleton.error == "" ? #202020 : #b00020;
+        }
+
+        Slider {
+            vertical-stretch: 0;
+            enabled: VideoSingleton.seekable;
+            minimum: 0;
+            maximum: max(1, VideoSingleton.duration-ms);
+            value <=> slider-position-ms;
+            changed(value) => { position-slider-dragging = true; }
+            released(value) => {
+                seek-target-ms = value;
+                position-seek-pending = true;
+                position-slider-dragging = false;
+                VideoSingleton.seek(value);
+            }
+        }
+
+        HorizontalBox {
+            vertical-stretch: 0;
+            Button {
+                text: VideoSingleton.playing ? @tr("Pause") : @tr("Play");
+                clicked => {
+                    if (VideoSingleton.playing) {
+                        VideoSingleton.pause();
+                    } else {
+                        VideoSingleton.play();
+                    }
+                }
+            }
+            Button { text: @tr("Stop"); clicked => { VideoSingleton.stop(); } }
+            Slider {
+                minimum: 0;
+                maximum: 1;
+                value <=> VideoSingleton.volume;
+                changed(value) => { VideoSingleton.set-volume(value); }
+            }
+            Switch {
+                text: @tr("Mute");
+                checked <=> VideoSingleton.muted;
+                toggled => { VideoSingleton.set-muted(self.checked); }
+            }
+        }
+    }
+}
