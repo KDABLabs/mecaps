@@ -268,6 +268,25 @@ TEST_SUITE("PDF controller")
 		CHECK(published == std::vector<GenerationId> { 2 });
 	}
 
+	TEST_CASE("closing clears the current document on the worker")
+	{
+		auto state = std::make_shared<FakeState>();
+		TestDispatcher dispatcher;
+		const auto callerThread = std::this_thread::get_id();
+		Controller controller(std::make_unique<FakeBackend>(state), dispatcher.dispatcher());
+		controller.open(1, { std::byte { 1 } }, [](OpenResult) {});
+		dispatcher.drain();
+
+		controller.close(2);
+		DocumentError error = DocumentError::none;
+		controller.pageMetadata(3, 0, [&](PageMetadataResult result) { error = result.error; });
+		dispatcher.drain();
+
+		CHECK(error == DocumentError::invalidDocument);
+		CHECK(state->destructionThread == state->backendThread);
+		CHECK(state->destructionThread != callerThread);
+	}
+
 	TEST_CASE("generation replacement suppresses a result before delayed work is submitted")
 	{
 		auto state = std::make_shared<FakeState>();

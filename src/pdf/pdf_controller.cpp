@@ -112,6 +112,21 @@ class Controller::Impl
 		});
 	}
 
+	void close(GenerationId generation)
+	{
+		{
+			const std::scoped_lock lock(m_mutex);
+			if (m_stopping || generation < m_publication->generation.load(std::memory_order_relaxed))
+				return;
+			advanceGenerationLocked(generation);
+			m_documentGeneration = generation;
+			m_cache.clear();
+			m_cacheBytes = 0;
+			m_closeRequested = true;
+		}
+		m_ready.notify_one();
+	}
+
 	void render(GenerationId generation, RenderRequest request, PixelFormat format, RenderCallback callback,
 	        RenderPriority priority)
 	{
@@ -402,12 +417,18 @@ class Controller::Impl
 			{
 				std::unique_lock lock(m_mutex);
 				m_ready.wait(lock, [this] {
-					return m_stopping || !m_visibleTasks.empty() || !m_prefetchTasks.empty();
+					return m_stopping || m_closeRequested || !m_visibleTasks.empty() || !m_prefetchTasks.empty();
 				});
 				if (m_stopping) {
 					m_document.reset();
 					m_backend.reset();
 					return;
+				}
+				if (m_closeRequested) {
+					m_document.reset();
+					m_loadedDocumentGeneration = 0;
+					m_closeRequested = false;
+					continue;
 				}
 				auto &tasks = !m_visibleTasks.empty() ? m_visibleTasks : m_prefetchTasks;
 				task = std::move(tasks.front());
@@ -456,6 +477,7 @@ class Controller::Impl
 	RenderPriority m_activeRenderPriority { RenderPriority::visible };
 	std::size_t m_cacheBytes { 0 };
 	std::size_t m_inFlight { 0 };
+	bool m_closeRequested { false };
 	bool m_stopping { false };
 	std::thread m_worker;
 };
@@ -470,6 +492,11 @@ Controller::~Controller() = default;
 void Controller::open(GenerationId generation, std::vector<std::byte> documentData, OpenCallback callback)
 {
 	m_impl->open(generation, std::move(documentData), std::move(callback));
+}
+
+void Controller::close(GenerationId generation)
+{
+	m_impl->close(generation);
 }
 
 void Controller::pageMetadata(GenerationId generation, std::size_t pageIndex, PageMetadataCallback callback)

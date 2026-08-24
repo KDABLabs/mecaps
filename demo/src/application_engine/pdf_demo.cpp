@@ -113,7 +113,7 @@ void PdfDemo::open(const slint::SharedString &path)
 	m_pageCount = 0;
 	m_hasPage = false;
 	m_renderedClip.reset();
-	m_controller->open(generation, {}, [](mecaps::pdf::OpenResult) {});
+	m_controller->close(generation);
 
 	{
 		const std::scoped_lock lock(m_fileMutex);

@@ -66,6 +66,7 @@ class Controller
 	Controller &operator=(Controller &&) = delete;
 
 	void open(GenerationId generation, std::vector<std::byte> documentData, OpenCallback callback);
+	void close(GenerationId generation);
 	void pageMetadata(GenerationId generation, std::size_t pageIndex, PageMetadataCallback callback);
 	void render(
 	        GenerationId generation,
