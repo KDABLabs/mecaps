@@ -27,4 +27,16 @@ if(BUILD_TESTS)
         LABELS
         "mecaps"
     )
+
+    set(GSTREAMER_TEST_TARGET test_gstreamer_video_player)
+    add_executable(${GSTREAMER_TEST_TARGET} tst_gstreamer_video_player.cpp)
+    target_link_libraries(${GSTREAMER_TEST_TARGET} PRIVATE ${TARGET_NAME} doctest::doctest PkgConfig::GStreamer)
+    doctest_discover_tests(
+        ${GSTREAMER_TEST_TARGET}
+        ADD_LABELS
+        1
+        PROPERTIES
+        LABELS
+        "mecaps"
+    )
 endif()
