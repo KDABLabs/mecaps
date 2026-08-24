@@ -34,6 +34,10 @@ if (BUILD_INTEGRATION_KDGUI_SLINT)
     include(cmake/dependencies/slint.cmake)
 endif()
 
+if (BUILD_INTEGRATION_VIDEO)
+    include(cmake/dependencies/gstreamer.cmake)
+endif()
+
 if(BUILD_TESTS)
     include(cmake/dependencies/doctest.cmake)
     include(cmake/dependencies/fff.cmake)
