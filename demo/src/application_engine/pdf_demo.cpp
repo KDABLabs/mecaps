@@ -1,6 +1,7 @@
 #include "pdf_demo.h"
 
 #include <KDUtils/dir.h>
+#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <chrono>
@@ -51,7 +52,11 @@ PdfDemo::PdfDemo(const PdfSingleton &ui, std::unique_ptr<mecaps::pdf::Backend> b
               std::move(backend),
               [](mecaps::pdf::Completion completion) {
 		      slint::invoke_from_event_loop(std::move(completion));
-	      }))
+	              },
+	              mecaps::pdf::ControllerLimits {},
+	              [](mecaps::pdf::DocumentError error) {
+		              spdlog::error("Failed to dispatch PDF completion (error {})", static_cast<int>(error));
+	              }))
 	, m_fileWorker([this] { runFileWorker(); })
 {
 	const auto documentPath = KDUtils::Dir::applicationDir().absoluteFilePath("demo_letter.pdf");

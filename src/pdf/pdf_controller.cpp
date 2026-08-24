@@ -19,9 +19,11 @@ namespace mecaps::pdf {
 class Controller::Impl
 {
   public:
-	Impl(std::unique_ptr<Backend> backend, Dispatcher dispatcher, ControllerLimits limits)
+	Impl(std::unique_ptr<Backend> backend, Dispatcher dispatcher, ControllerLimits limits,
+	        DispatchFailureReporter dispatchFailureReporter)
 	    : m_backend(std::move(backend))
 	    , m_dispatcher(std::move(dispatcher))
+	    , m_dispatchFailureReporter(std::move(dispatchFailureReporter))
 	    , m_limits(limits)
 	    , m_worker([this] { run(); })
 	{
@@ -154,7 +156,7 @@ class Controller::Impl
 			}
 		}
 		if (cachedResult) {
-			dispatch(generation, [callback = std::move(callback), result = std::move(*cachedResult)]() mutable {
+			dispatchOrReport(generation, [callback = std::move(callback), result = std::move(*cachedResult)]() mutable {
 				callback(std::move(result));
 			});
 			return;
@@ -315,7 +317,7 @@ class Controller::Impl
 			}
 		}
 		if (limitFailure) {
-			dispatch(generation, failure(DocumentError::resourceLimit));
+			dispatchOrReport(generation, failure(DocumentError::resourceLimit));
 			return;
 		}
 		m_ready.notify_one();
@@ -372,7 +374,7 @@ class Controller::Impl
 				return;
 			advanceGenerationLocked(generation);
 		}
-		dispatch(generation, std::move(completion));
+		dispatchOrReport(generation, std::move(completion));
 	}
 
 	bool finishTask(GenerationId generation)
@@ -394,10 +396,33 @@ class Controller::Impl
 		});
 	}
 
+	void dispatchOrReport(GenerationId generation, Completion completion) noexcept
+	{
+		try {
+			dispatch(generation, std::move(completion));
+		} catch (const std::bad_alloc &) {
+			reportDispatchFailure(DocumentError::resourceLimit);
+		} catch (...) {
+			reportDispatchFailure(DocumentError::backendFailure);
+		}
+	}
+
 	void dispatchFailure(Task &task, DocumentError error) noexcept
 	{
 		try {
 			dispatch(task.generation, deliverOnce(task, task.failure(error)));
+		} catch (const std::bad_alloc &) {
+			reportDispatchFailure(DocumentError::resourceLimit);
+		} catch (...) {
+			reportDispatchFailure(DocumentError::backendFailure);
+		}
+	}
+
+	void reportDispatchFailure(DocumentError error) noexcept
+	{
+		try {
+			if (m_dispatchFailureReporter)
+				m_dispatchFailureReporter(error);
 		} catch (...) {
 		}
 	}
@@ -463,6 +488,7 @@ class Controller::Impl
 	std::unique_ptr<Backend> m_backend;
 	std::unique_ptr<Document> m_document;
 	Dispatcher m_dispatcher;
+	DispatchFailureReporter m_dispatchFailureReporter;
 	ControllerLimits m_limits;
 	std::shared_ptr<PublicationState> m_publication = std::make_shared<PublicationState>();
 	std::mutex m_mutex;
@@ -482,8 +508,10 @@ class Controller::Impl
 	std::thread m_worker;
 };
 
-Controller::Controller(std::unique_ptr<Backend> backend, Dispatcher dispatcher, ControllerLimits limits)
-    : m_impl(std::make_unique<Impl>(std::move(backend), std::move(dispatcher), limits))
+Controller::Controller(std::unique_ptr<Backend> backend, Dispatcher dispatcher, ControllerLimits limits,
+        DispatchFailureReporter dispatchFailureReporter)
+	: m_impl(std::make_unique<Impl>(std::move(backend), std::move(dispatcher), limits,
+	          std::move(dispatchFailureReporter)))
 {
 }
 

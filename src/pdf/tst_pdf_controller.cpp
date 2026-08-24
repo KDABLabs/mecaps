@@ -6,6 +6,7 @@
 #include <cmath>
 #include <condition_variable>
 #include <deque>
+#include <future>
 #include <mutex>
 #include <new>
 #include <stdexcept>
@@ -31,6 +32,8 @@ class TestDispatcher
 	{
 		return [this](Completion completion) {
 			const std::scoped_lock lock(m_mutex);
+			if (m_failAllDispatches)
+				throw std::runtime_error("persistent dispatcher failure");
 			const auto failure = std::exchange(m_failure, Failure::none);
 			if (failure == Failure::badAllocation)
 				throw std::bad_alloc {};
@@ -55,6 +58,12 @@ class TestDispatcher
 		m_failure = failure;
 	}
 
+	void failAllDispatches()
+	{
+		const std::scoped_lock lock(m_mutex);
+		m_failAllDispatches = true;
+	}
+
 	void drain(std::size_t count = 1)
 	{
 		std::unique_lock lock(m_mutex);
@@ -77,6 +86,7 @@ class TestDispatcher
 	std::condition_variable m_ready;
 	std::deque<Completion> m_completions;
 	Failure m_failure { Failure::none };
+	bool m_failAllDispatches { false };
 };
 
 struct FakeState {
@@ -392,6 +402,55 @@ TEST_SUITE("PDF controller")
 		controller.pageMetadata(3, 0, [&](PageMetadataResult result) { laterError = result.error; });
 		dispatcher.drain();
 		CHECK(laterError == DocumentError::none);
+	}
+
+	TEST_CASE("a persistent dispatcher failure is reported to the host")
+	{
+		auto state = std::make_shared<FakeState>();
+		TestDispatcher dispatcher;
+		std::promise<DocumentError> reportedError;
+		auto reported = reportedError.get_future();
+		Controller controller(std::make_unique<FakeBackend>(state), dispatcher.dispatcher(), {},
+		        [&](DocumentError error) { reportedError.set_value(error); });
+		controller.open(1, { std::byte { 1 } }, [](OpenResult) {});
+		dispatcher.drain();
+
+		dispatcher.failAllDispatches();
+		controller.pageMetadata(2, 0, [](PageMetadataResult) {});
+
+		REQUIRE(reported.wait_for(std::chrono::seconds(1)) == std::future_status::ready);
+		CHECK(reported.get() == DocumentError::backendFailure);
+	}
+
+	TEST_CASE("caller-thread dispatcher failures are reported to the host")
+	{
+		auto state = std::make_shared<FakeState>();
+		TestDispatcher dispatcher;
+		std::vector<DocumentError> reported;
+		Controller controller(std::make_unique<FakeBackend>(state), dispatcher.dispatcher(), {},
+		        [&](DocumentError error) { reported.push_back(error); });
+
+		SUBCASE("immediate failure")
+		{
+			dispatcher.failNextDispatch(TestDispatcher::Failure::badAllocation);
+			auto oversizedRequest = request();
+			oversizedRequest.outputWidth = 5'000;
+			oversizedRequest.outputHeight = 5'000;
+			controller.render(1, oversizedRequest, PixelFormat::rgba8, [](RenderResult) {});
+			CHECK(reported == std::vector { DocumentError::resourceLimit });
+		}
+
+		SUBCASE("cache hit")
+		{
+			controller.open(1, { std::byte { 1 } }, [](OpenResult) {});
+			dispatcher.drain();
+			controller.render(2, request(), PixelFormat::rgba8, [](RenderResult) {});
+			dispatcher.drain();
+
+			dispatcher.failNextDispatch(TestDispatcher::Failure::other);
+			controller.render(3, request(), PixelFormat::rgba8, [](RenderResult) {});
+			CHECK(reported == std::vector { DocumentError::backendFailure });
+		}
 	}
 
 	TEST_CASE("controller boundaries report configured resource limits")
