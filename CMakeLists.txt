@@ -40,6 +40,10 @@ if (BUILD_INTEGRATION_MQTT)
     add_subdirectory(src/mqtt)
 endif()
 
+if (BUILD_INTEGRATION_VIDEO)
+    add_subdirectory(src/video)
+endif()
+
 if (BUILD_DEMO_UI AND BUILD_INTEGRATION_KDGUI_SLINT)
     add_subdirectory(demo)
 endif()
