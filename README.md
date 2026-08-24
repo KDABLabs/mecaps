@@ -18,6 +18,7 @@ The starter pack comes with the following integrations that are all hooked into 
 
 * curl integration
 * mosquito integration
+* optional Linux GStreamer video integration
 
 ## Prerequisites
 
@@ -42,6 +43,18 @@ are:
 ```
 sudo apt install build-essential cmake git libxkbcommon-dev libxcb-xkb-dev libxkbcommon-x11-dev wayland-scanner++ wayland-protocols libwayland-dev libmosquittopp-dev
 ```
+
+Local video playback is optional. Install the GStreamer development files and
+base runtime plugins, then enable it explicitly:
+
+```
+sudo apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+cmake -B build -DBUILD_INTEGRATION_VIDEO=ON
+```
+
+The demo ships a small generated WebM fixture with synchronized synthetic audio
+and video. It is copied beside the demo executable and preselected on the Video
+page, so playback does not require network access or a separate media file.
 
 ## Usage
 
